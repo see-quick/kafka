@@ -63,7 +63,6 @@ import joptsimple.OptionSpec;
 
 public class TestLinearWriteSpeed {
 
-    @SuppressWarnings({"JavaNCSS", "NPathComplexity", "MethodLength"})
     public static void main(String[] args) throws Exception {
         OptionParser parser = new OptionParser();
 
