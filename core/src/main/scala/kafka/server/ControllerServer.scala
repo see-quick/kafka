@@ -22,9 +22,10 @@ import kafka.raft.KafkaRaftManager
 import kafka.server.QuotaFactory.QuotaManagers
 
 import scala.collection.immutable
-import kafka.server.metadata.{ClientQuotaMetadataManager, DynamicClientQuotaPublisher, DynamicConfigPublisher, DynamicTopicClusterQuotaPublisher, KRaftMetadataCache, KRaftMetadataCachePublisher}
+import kafka.server.metadata.{DynamicConfigPublisher, DynamicTopicClusterQuotaPublisher, KRaftMetadataCache, KRaftMetadataCachePublisher}
 import kafka.utils.{CoreUtils, Logging}
 import org.apache.kafka.common.internals.Plugin
+import org.apache.kafka.metadata.publisher.DynamicClientQuotaPublisher
 import org.apache.kafka.common.message.ApiMessageType.ListenerType
 import org.apache.kafka.common.network.ListenerName
 import org.apache.kafka.common.metrics.Metrics
@@ -94,7 +95,7 @@ class ControllerServer(
   @volatile var quorumControllerMetrics: QuorumControllerMetrics = _
   var controller: Controller = _
   var quotaManagers: QuotaManagers = _
-  var clientQuotaMetadataManager: ClientQuotaMetadataManager = _
+  var clientQuotaMetadataManager: org.apache.kafka.metadata.publisher.ClientQuotaMetadataManager = _
   var controllerApis: ControllerApis = _
   var controllerApisHandlerPool: KafkaRequestHandlerPool = _
   def kafkaYammerMetrics: KafkaYammerMetrics = KafkaYammerMetrics.INSTANCE
@@ -271,7 +272,7 @@ class ControllerServer(
         metrics,
         time,
         s"controller-${config.nodeId}-", ProcessRole.ControllerRole.toString)
-      clientQuotaMetadataManager = new ClientQuotaMetadataManager(quotaManagers, socketServer.connectionQuotas)
+      clientQuotaMetadataManager = new kafka.server.metadata.ClientQuotaMetadataManagerImpl(quotaManagers, socketServer.connectionQuotas)
       controllerApis = new ControllerApis(socketServer.dataPlaneRequestChannel,
         authorizerPlugin,
         quotaManagers,
@@ -334,7 +335,7 @@ class ControllerServer(
       // Set up the client quotas publisher. This will enable controller mutation quotas and any
       // other quotas which are applicable.
       metadataPublishers.add(new DynamicClientQuotaPublisher(
-        config,
+        config.nodeId,
         sharedServer.metadataPublishingFaultHandler,
         "controller",
         clientQuotaMetadataManager

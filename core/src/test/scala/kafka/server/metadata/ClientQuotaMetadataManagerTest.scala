@@ -27,50 +27,42 @@ class ClientQuotaMetadataManagerTest {
 
   @Test
   def testHandleIpQuota(): Unit = {
-    val manager = new ClientQuotaMetadataManager(null, null)
-    assertThrows(classOf[IllegalArgumentException], () => manager.handleIpQuota(IpEntity("a"), new ClientQuotaDelta(null)))
-    assertThrows(classOf[IllegalStateException], () => manager.handleIpQuota(UserEntity("a"), new ClientQuotaDelta(null)))
-    assertDoesNotThrow { new Executable { def execute(): Unit = manager.handleIpQuota(DefaultIpEntity, new ClientQuotaDelta(null)) } }
-    assertDoesNotThrow { new Executable { def execute(): Unit = manager.handleIpQuota(IpEntity("192.168.1.1"), new ClientQuotaDelta(null)) } }
-    assertDoesNotThrow { new Executable { def execute(): Unit = manager.handleIpQuota(IpEntity("2001:db8::1"), new ClientQuotaDelta(null)) } }
+    val manager = new ClientQuotaMetadataManagerImpl(null, null)
+    assertThrows(classOf[IllegalArgumentException], () => manager.handleIpQuota(new ClientQuotaMetadataManagerImpl.IpEntity("a"), new ClientQuotaDelta(null)))
+    assertThrows(classOf[IllegalStateException], () => manager.handleIpQuota(new ClientQuotaMetadataManagerImpl.UserEntity("a"), new ClientQuotaDelta(null)))
+    assertDoesNotThrow { new Executable { def execute(): Unit = manager.handleIpQuota(new ClientQuotaMetadataManagerImpl.DefaultIpEntity(), new ClientQuotaDelta(null)) } }
+    assertDoesNotThrow { new Executable { def execute(): Unit = manager.handleIpQuota(new ClientQuotaMetadataManagerImpl.IpEntity("192.168.1.1"), new ClientQuotaDelta(null)) } }
+    assertDoesNotThrow { new Executable { def execute(): Unit = manager.handleIpQuota(new ClientQuotaMetadataManagerImpl.IpEntity("2001:db8::1"), new ClientQuotaDelta(null)) } }
   }
 
   @Test
   def testTransferToClientQuotaEntity(): Unit = {
     
-    assertThrows(classOf[IllegalStateException],() => ClientQuotaMetadataManager.transferToClientQuotaEntity(IpEntity("a")))
-    assertThrows(classOf[IllegalStateException],() => ClientQuotaMetadataManager.transferToClientQuotaEntity(DefaultIpEntity))
-    assertEquals(
-      (Optional.of(new ClientQuotaManager.UserEntity("user")), Optional.empty()),
-      ClientQuotaMetadataManager.transferToClientQuotaEntity(UserEntity("user"))
-    )
-    assertEquals(
-      (Optional.of(ClientQuotaManager.DEFAULT_USER_ENTITY), Optional.empty()),
-      ClientQuotaMetadataManager.transferToClientQuotaEntity(DefaultUserEntity)
-    )
-    assertEquals(
-      (Optional.empty(), Optional.of(new ClientQuotaManager.ClientIdEntity("client"))),
-      ClientQuotaMetadataManager.transferToClientQuotaEntity(ClientIdEntity("client"))
-    )
-    assertEquals(
-      (Optional.empty(), Optional.of(ClientQuotaManager.DEFAULT_USER_CLIENT_ID)),
-      ClientQuotaMetadataManager.transferToClientQuotaEntity(DefaultClientIdEntity)
-    )
-    assertEquals(
-      (Optional.of(new ClientQuotaManager.UserEntity("user")), Optional.of(new ClientQuotaManager.ClientIdEntity("client"))),
-      ClientQuotaMetadataManager.transferToClientQuotaEntity(ExplicitUserExplicitClientIdEntity("user", "client"))
-    )
-    assertEquals(
-      (Optional.of(new ClientQuotaManager.UserEntity("user")), Optional.of(ClientQuotaManager.DEFAULT_USER_CLIENT_ID)),
-      ClientQuotaMetadataManager.transferToClientQuotaEntity(ExplicitUserDefaultClientIdEntity("user"))
-    )
-    assertEquals(
-      (Optional.of(ClientQuotaManager.DEFAULT_USER_ENTITY), Optional.of(new ClientQuotaManager.ClientIdEntity("client"))),
-      ClientQuotaMetadataManager.transferToClientQuotaEntity(DefaultUserExplicitClientIdEntity("client"))
-    )
-    assertEquals(
-      (Optional.of(ClientQuotaManager.DEFAULT_USER_ENTITY), Optional.of(ClientQuotaManager.DEFAULT_USER_CLIENT_ID)),
-      ClientQuotaMetadataManager.transferToClientQuotaEntity(DefaultUserDefaultClientIdEntity)
-    )
+    assertThrows(classOf[IllegalStateException],() => ClientQuotaMetadataManagerImpl.transferToClientQuotaEntity(new ClientQuotaMetadataManagerImpl.IpEntity("a")))
+    assertThrows(classOf[IllegalStateException],() => ClientQuotaMetadataManagerImpl.transferToClientQuotaEntity(new ClientQuotaMetadataManagerImpl.DefaultIpEntity()))
+    val result = ClientQuotaMetadataManagerImpl.transferToClientQuotaEntity(new ClientQuotaMetadataManagerImpl.UserEntity("user"))
+    assertEquals(Optional.of(new ClientQuotaManager.UserEntity("user")), result.getKey)
+    assertEquals(Optional.empty(), result.getValue)
+    val result2 = ClientQuotaMetadataManagerImpl.transferToClientQuotaEntity(new ClientQuotaMetadataManagerImpl.DefaultUserEntity())
+    assertEquals(Optional.of(ClientQuotaManager.DEFAULT_USER_ENTITY), result2.getKey)
+    assertEquals(Optional.empty(), result2.getValue)
+    val result3 = ClientQuotaMetadataManagerImpl.transferToClientQuotaEntity(new ClientQuotaMetadataManagerImpl.ClientIdEntity("client"))
+    assertEquals(Optional.empty(), result3.getKey)
+    assertEquals(Optional.of(new ClientQuotaManager.ClientIdEntity("client")), result3.getValue)
+    val result4 = ClientQuotaMetadataManagerImpl.transferToClientQuotaEntity(new ClientQuotaMetadataManagerImpl.DefaultClientIdEntity())
+    assertEquals(Optional.empty(), result4.getKey)
+    assertEquals(Optional.of(ClientQuotaManager.DEFAULT_USER_CLIENT_ID), result4.getValue)
+    val result5 = ClientQuotaMetadataManagerImpl.transferToClientQuotaEntity(new ClientQuotaMetadataManagerImpl.ExplicitUserExplicitClientIdEntity("user", "client"))
+    assertEquals(Optional.of(new ClientQuotaManager.UserEntity("user")), result5.getKey)
+    assertEquals(Optional.of(new ClientQuotaManager.ClientIdEntity("client")), result5.getValue)
+    val result6 = ClientQuotaMetadataManagerImpl.transferToClientQuotaEntity(new ClientQuotaMetadataManagerImpl.ExplicitUserDefaultClientIdEntity("user"))
+    assertEquals(Optional.of(new ClientQuotaManager.UserEntity("user")), result6.getKey)
+    assertEquals(Optional.of(ClientQuotaManager.DEFAULT_USER_CLIENT_ID), result6.getValue)
+    val result7 = ClientQuotaMetadataManagerImpl.transferToClientQuotaEntity(new ClientQuotaMetadataManagerImpl.DefaultUserExplicitClientIdEntity("client"))
+    assertEquals(Optional.of(ClientQuotaManager.DEFAULT_USER_ENTITY), result7.getKey)
+    assertEquals(Optional.of(new ClientQuotaManager.ClientIdEntity("client")), result7.getValue)
+    val result8 = ClientQuotaMetadataManagerImpl.transferToClientQuotaEntity(new ClientQuotaMetadataManagerImpl.DefaultUserDefaultClientIdEntity())
+    assertEquals(Optional.of(ClientQuotaManager.DEFAULT_USER_ENTITY), result8.getKey)
+    assertEquals(Optional.of(ClientQuotaManager.DEFAULT_USER_CLIENT_ID), result8.getValue)
   }
 }
