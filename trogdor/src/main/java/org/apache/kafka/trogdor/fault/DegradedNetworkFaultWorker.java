@@ -146,13 +146,12 @@ public class DegradedNetworkFaultWorker implements TaskWorker {
 
     /**
      * Construct the second part of a "tc" command that defines a netem (Network Emulator) filter that will apply some
-     * amount of latency with a small amount of deviation. The distribution of the latency deviation follows a so-called
-     * Pareto-normal distribution. This is the formal name for the 80/20 rule, which might better represent real-world
-     * patterns.
+     * amount of latency with a small amount of deviation. The distribution of the latency deviation uses the default
+     * uniform distribution, which is more widely supported across different kernel configurations than named
+     * distributions like paretonormal.
      */
     private void netemDelay(int delayMs, int deviationMs, Consumer<String> consumer) {
-        Stream.of("netem", "delay", String.format("%dms", delayMs), String.format("%dms", deviationMs),
-                "distribution", "paretonormal").forEach(consumer);
+        Stream.of("netem", "delay", String.format("%dms", delayMs), String.format("%dms", deviationMs)).forEach(consumer);
     }
 
     /**
