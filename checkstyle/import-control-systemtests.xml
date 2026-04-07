@@ -18,17 +18,11 @@
  limitations under the License.
 -->
 
-<import-control pkg="org.apache.kafka">
-    <!-- allow any import from kafka -->
+<import-control pkg="org.apache.kafka.systemtests">
     <allow pkg="org.apache.kafka" />
-    <allow pkg="kafka" />
 
     <allow pkg="org.slf4j"/>
-    <allow pkg="org.mockito"/>
     <allow pkg="org.junit"/>
     <allow pkg="java" />
-    <allow pkg="scala.jdk.javaapi" />
-    <allow pkg="javax.security" />
     <allow pkg="org.testcontainers" />
-    <allow pkg="com.github.dockerjava" />
 </import-control>

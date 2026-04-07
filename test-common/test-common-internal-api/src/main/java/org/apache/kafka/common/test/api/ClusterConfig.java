@@ -44,6 +44,7 @@ import static org.apache.kafka.common.test.api.TestKitDefaults.DEFAULT_CONTROLLE
 public class ClusterConfig {
 
     private final Set<Type> types;
+    private final Set<ExecutionMode> executionModes;
     private final int brokers;
     private final int controllers;
     private final int disksPerBroker;
@@ -54,26 +55,30 @@ public class ClusterConfig {
     private final ListenerName controllerListenerName;
     private final File trustStoreFile;
     private final MetadataVersion metadataVersion;
+    private final String saslMechanism;
 
     private final Map<String, String> serverProperties;
     private final List<String> tags;
     private final Map<Integer, Map<String, String>> perServerProperties;
     private final Map<Feature, Short> features;
     private final boolean standalone;
+    private final String containerImage;
 
     @SuppressWarnings("checkstyle:ParameterNumber")
-    private ClusterConfig(Set<Type> types, int brokers, int controllers, int disksPerBroker, boolean autoStart,
+    private ClusterConfig(Set<Type> types, Set<ExecutionMode> executionModes, int brokers, int controllers,
+                  int disksPerBroker, boolean autoStart,
                   SecurityProtocol brokerSecurityProtocol, ListenerName brokerListenerName,
                   SecurityProtocol controllerSecurityProtocol, ListenerName controllerListenerName, File trustStoreFile,
-                  MetadataVersion metadataVersion, Map<String, String> serverProperties,
+                  MetadataVersion metadataVersion, String saslMechanism, Map<String, String> serverProperties,
                   Map<Integer, Map<String, String>> perServerProperties, List<String> tags, Map<Feature, Short> features,
-                  boolean standalone) {
+                  boolean standalone, String containerImage) {
         // do fail fast. the following values are invalid for kraft modes.
         if (brokers < 0) throw new IllegalArgumentException("Number of brokers must be greater or equal to zero.");
         if (controllers < 0) throw new IllegalArgumentException("Number of controller must be greater or equal to zero.");
         if (disksPerBroker <= 0) throw new IllegalArgumentException("Number of disks must be greater than zero.");
 
         this.types = Objects.requireNonNull(types);
+        this.executionModes = Objects.requireNonNull(executionModes);
         this.brokers = brokers;
         this.controllers = controllers;
         this.disksPerBroker = disksPerBroker;
@@ -84,15 +89,21 @@ public class ClusterConfig {
         this.controllerListenerName = Objects.requireNonNull(controllerListenerName);
         this.trustStoreFile = trustStoreFile;
         this.metadataVersion = Objects.requireNonNull(metadataVersion);
+        this.saslMechanism = saslMechanism;
         this.serverProperties = Objects.requireNonNull(serverProperties);
         this.perServerProperties = Objects.requireNonNull(perServerProperties);
         this.tags = Objects.requireNonNull(tags);
         this.features = Objects.requireNonNull(features);
         this.standalone = standalone;
+        this.containerImage = containerImage;
     }
 
     public Set<Type> clusterTypes() {
         return types;
+    }
+
+    public Set<ExecutionMode> executionModes() {
+        return executionModes;
     }
 
     public int numBrokers() {
@@ -139,6 +150,10 @@ public class ClusterConfig {
         return metadataVersion;
     }
 
+    public String saslMechanism() {
+        return saslMechanism;
+    }
+
     public boolean standalone() {
         return standalone;
     }
@@ -155,6 +170,14 @@ public class ClusterConfig {
         return features;
     }
 
+    /**
+     * Returns the Docker image to use for container-based tests, or empty if the default should be used.
+     * Format: "apache/kafka:4.2.0" or just a version like "4.2.0" (resolved by KafkaContainerCluster).
+     */
+    public Optional<String> containerImage() {
+        return Optional.ofNullable(containerImage);
+    }
+
     public Set<String> displayTags() {
         Set<String> displayTags = new LinkedHashSet<>(tags);
         displayTags.add("MetadataVersion=" + metadataVersion);
@@ -162,12 +185,19 @@ public class ClusterConfig {
         displayTags.add("BrokerListenerName=" + brokerListenerName);
         displayTags.add("ControllerSecurityProtocol=" + controllerSecurityProtocol.name());
         displayTags.add("ControllerListenerName=" + controllerListenerName);
+        if (saslMechanism != null) {
+            displayTags.add("SaslMechanism=" + saslMechanism);
+        }
+        if (containerImage != null) {
+            displayTags.add("ContainerImage=" + containerImage);
+        }
         return displayTags;
     }
 
     public static Builder defaultBuilder() {
         return new Builder()
                 .setTypes(Stream.of(Type.KRAFT, Type.CO_KRAFT).collect(Collectors.toSet()))
+                .setExecutionModes(Set.of(ExecutionMode.IN_MEMORY))
                 .setBrokers(1)
                 .setControllers(1)
                 .setDisksPerBroker(1)
@@ -186,6 +216,7 @@ public class ClusterConfig {
     public static Builder builder(ClusterConfig clusterConfig) {
         return new Builder()
                 .setTypes(clusterConfig.types)
+                .setExecutionModes(clusterConfig.executionModes)
                 .setBrokers(clusterConfig.brokers)
                 .setControllers(clusterConfig.controllers)
                 .setDisksPerBroker(clusterConfig.disksPerBroker)
@@ -196,15 +227,18 @@ public class ClusterConfig {
                 .setControllerListenerName(clusterConfig.controllerListenerName)
                 .setTrustStoreFile(clusterConfig.trustStoreFile)
                 .setMetadataVersion(clusterConfig.metadataVersion)
+                .setSaslMechanism(clusterConfig.saslMechanism)
                 .setServerProperties(clusterConfig.serverProperties)
                 .setPerServerProperties(clusterConfig.perServerProperties)
                 .setTags(clusterConfig.tags)
                 .setFeatures(clusterConfig.features)
-                .setStandalone(clusterConfig.standalone);
+                .setStandalone(clusterConfig.standalone)
+                .setContainerImage(clusterConfig.containerImage);
     }
 
     public static class Builder {
         private Set<Type> types;
+        private Set<ExecutionMode> executionModes = Set.of(ExecutionMode.IN_MEMORY);
         private int brokers;
         private int controllers;
         private int disksPerBroker;
@@ -215,16 +249,23 @@ public class ClusterConfig {
         private ListenerName controllerListenerName;
         private File trustStoreFile;
         private MetadataVersion metadataVersion;
+        private String saslMechanism;
         private Map<String, String> serverProperties = Map.of();
         private Map<Integer, Map<String, String>> perServerProperties = Map.of();
         private List<String> tags = List.of();
         private Map<Feature, Short> features = Map.of();
         private boolean standalone = false;
+        private String containerImage;
 
         private Builder() {}
 
         public Builder setTypes(Set<Type> types) {
             this.types = Set.copyOf(types);
+            return this;
+        }
+
+        public Builder setExecutionModes(Set<ExecutionMode> executionModes) {
+            this.executionModes = Set.copyOf(executionModes);
             return this;
         }
 
@@ -278,6 +319,11 @@ public class ClusterConfig {
             return this;
         }
 
+        public Builder setSaslMechanism(String saslMechanism) {
+            this.saslMechanism = saslMechanism;
+            return this;
+        }
+
         public Builder setServerProperties(Map<String, String> serverProperties) {
             this.serverProperties = Map.copyOf(serverProperties);
             return this;
@@ -305,10 +351,44 @@ public class ClusterConfig {
             return this;
         }
 
+        public Builder setContainerImage(String containerImage) {
+            this.containerImage = containerImage;
+            return this;
+        }
+
+        /**
+         * Returns a shallow copy of this builder so that shared base settings
+         * can be reused while varying individual fields (e.g., containerImage).
+         */
+        public Builder copy() {
+            Builder b = new Builder();
+            b.types = this.types;
+            b.executionModes = this.executionModes;
+            b.brokers = this.brokers;
+            b.controllers = this.controllers;
+            b.disksPerBroker = this.disksPerBroker;
+            b.autoStart = this.autoStart;
+            b.brokerSecurityProtocol = this.brokerSecurityProtocol;
+            b.brokerListenerName = this.brokerListenerName;
+            b.controllerSecurityProtocol = this.controllerSecurityProtocol;
+            b.controllerListenerName = this.controllerListenerName;
+            b.trustStoreFile = this.trustStoreFile;
+            b.metadataVersion = this.metadataVersion;
+            b.saslMechanism = this.saslMechanism;
+            b.serverProperties = this.serverProperties;
+            b.perServerProperties = this.perServerProperties;
+            b.tags = this.tags;
+            b.features = this.features;
+            b.standalone = this.standalone;
+            b.containerImage = this.containerImage;
+            return b;
+        }
+
         public ClusterConfig build() {
-            return new ClusterConfig(types, brokers, controllers, disksPerBroker, autoStart,
+            return new ClusterConfig(types, executionModes, brokers, controllers, disksPerBroker, autoStart,
                     brokerSecurityProtocol, brokerListenerName, controllerSecurityProtocol, controllerListenerName,
-                    trustStoreFile, metadataVersion, serverProperties, perServerProperties, tags, features, standalone);
+                    trustStoreFile, metadataVersion, saslMechanism, serverProperties, perServerProperties, tags,
+                    features, standalone, containerImage);
         }
     }
 }

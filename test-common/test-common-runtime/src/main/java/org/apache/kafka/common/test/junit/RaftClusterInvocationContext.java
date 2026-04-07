@@ -30,6 +30,7 @@ import org.apache.kafka.common.test.JaasUtils;
 import org.apache.kafka.common.test.KafkaClusterTestKit;
 import org.apache.kafka.common.test.TestKitNodes;
 import org.apache.kafka.common.test.api.ClusterConfig;
+import org.apache.kafka.common.test.api.ExecutionMode;
 import org.apache.kafka.common.test.api.Type;
 import org.apache.kafka.common.utils.Utils;
 import org.apache.kafka.metadata.BrokerState;
@@ -84,7 +85,12 @@ public class RaftClusterInvocationContext implements TestTemplateInvocationConte
      */
     static void waitForCondition(final java.util.function.Supplier<Boolean> testCondition,
                                         final String conditionDetails) throws InterruptedException {
-        var maxWaitMs = 15_000L;
+        waitForCondition(testCondition, conditionDetails, 15_000L);
+    }
+
+    static void waitForCondition(final java.util.function.Supplier<Boolean> testCondition,
+                                        final String conditionDetails,
+                                        final long maxWaitMs) throws InterruptedException {
         long endTime = System.currentTimeMillis() + maxWaitMs;
 
         while (System.currentTimeMillis() < endTime) {
@@ -212,6 +218,11 @@ public class RaftClusterInvocationContext implements TestTemplateInvocationConte
         @Override
         public Type type() {
             return isCombined ? Type.CO_KRAFT : Type.KRAFT;
+        }
+
+        @Override
+        public ExecutionMode executionMode() {
+            return ExecutionMode.IN_MEMORY;
         }
 
         @Override

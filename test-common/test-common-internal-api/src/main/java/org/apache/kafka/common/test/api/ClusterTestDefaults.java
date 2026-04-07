@@ -35,6 +35,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Retention(RUNTIME)
 public @interface ClusterTestDefaults {
     Type[] types() default {Type.KRAFT, Type.CO_KRAFT};
+    ExecutionMode[] executionModes() default {ExecutionMode.IN_MEMORY};
     int brokers() default 1;
     int controllers() default 1;
     int disksPerBroker() default 1;

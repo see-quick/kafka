@@ -41,6 +41,7 @@ import static org.apache.kafka.common.test.api.TestKitDefaults.DEFAULT_CONTROLLE
 @Tag("integration")
 public @interface ClusterTest {
     Type[] types() default {};
+    ExecutionMode[] executionModes() default {};
     int brokers() default 0;
     int controllers() default 0;
     int disksPerBroker() default 0;
@@ -58,4 +59,9 @@ public @interface ClusterTest {
     String[] tags() default {};
     ClusterFeature[] features() default {};
     boolean standalone() default false;
+    String[] containerImages() default {};
+    // Name of a static method returning String[] or List<String> of container image names.
+    // When set, the method is resolved on the test class and its result is used
+    // as the container images (in addition to any literal containerImages values).
+    String containerImageSource() default "";
 }

@@ -26,6 +26,7 @@ import org.apache.kafka.common.test.api.ClusterTest;
 import org.apache.kafka.common.test.api.ClusterTestDefaults;
 import org.apache.kafka.common.test.api.ClusterTests;
 import org.apache.kafka.common.test.api.DetectThreadLeak;
+import org.apache.kafka.common.test.api.ExecutionMode;
 import org.apache.kafka.common.test.api.Type;
 import org.apache.kafka.server.common.Feature;
 import org.apache.kafka.server.util.timer.SystemTimer;
@@ -110,10 +111,13 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
     private static final String RMI_THREAD_PREFIX = "RMI";
     private static final String JDK_INTERNAL_CLEANERIMPL_THREAD_PREFIX = "Cleaner-";
 
+    private static final String TESTCONTAINERS_THREAD_PREFIX = "testcontainers-";
+    private static final String DOCKER_JAVA_STREAM_THREAD_PREFIX = "docker-java-stream-";
     private static final String DETECT_THREAD_LEAK_KEY = "detectThreadLeak";
     private static final Set<String> SKIPPED_THREAD_PREFIX = Set.of(METRICS_METER_TICK_THREAD_PREFIX, SCALA_THREAD_PREFIX,
             FORK_JOIN_POOL_THREAD_PREFIX, JUNIT_THREAD_PREFIX, ATTACH_LISTENER_THREAD_PREFIX, PROCESS_REAPER_THREAD_PREFIX,
-            RMI_THREAD_PREFIX, SystemTimer.SYSTEM_TIMER_THREAD_PREFIX, JDK_INTERNAL_CLEANERIMPL_THREAD_PREFIX);
+            RMI_THREAD_PREFIX, SystemTimer.SYSTEM_TIMER_THREAD_PREFIX, TESTCONTAINERS_THREAD_PREFIX,
+            DOCKER_JAVA_STREAM_THREAD_PREFIX, JDK_INTERNAL_CLEANERIMPL_THREAD_PREFIX);
 
     @Override
     public boolean supportsTestTemplate(ExtensionContext context) {
@@ -206,14 +210,16 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
         return count;
     }
 
-    private TestTemplateInvocationContext invocationContextForClusterType(
+    private TestTemplateInvocationContext invocationContextFor(
         Type type,
+        ExecutionMode executionMode,
         String baseDisplayName,
         ClusterConfig config
     ) {
-        return switch (type) {
-            case KRAFT -> new RaftClusterInvocationContext(baseDisplayName, config, false);
-            case CO_KRAFT -> new RaftClusterInvocationContext(baseDisplayName, config, true);
+        boolean isCombined = (type == Type.CO_KRAFT);
+        return switch (executionMode) {
+            case IN_MEMORY -> new RaftClusterInvocationContext(baseDisplayName, config, isCombined);
+            case CONTAINER -> new ContainerClusterInvocationContext(baseDisplayName, config, isCombined);
         };
     }
 
@@ -227,7 +233,9 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
         List<TestTemplateInvocationContext> contexts = IntStream.range(0, repeatCount)
             .mapToObj(__ -> generateClusterConfiguration(context, annot.value()).stream())
             .flatMap(Function.identity())
-            .flatMap(config -> config.clusterTypes().stream().map(type -> invocationContextForClusterType(type, baseDisplayName, config)))
+            .flatMap(config -> config.clusterTypes().stream()
+                .flatMap(type -> config.executionModes().stream()
+                    .map(exec -> invocationContextFor(type, exec, baseDisplayName, config))))
             .collect(Collectors.toList());
 
         if (contexts.isEmpty()) {
@@ -272,6 +280,9 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
         ClusterTestDefaults defaults
     ) {
         Type[] types = clusterTest.types().length == 0 ? defaults.types() : clusterTest.types();
+        ExecutionMode[] executionModes = clusterTest.executionModes().length == 0
+            ? defaults.executionModes() : clusterTest.executionModes();
+
         Map<String, String> serverProperties = Stream.concat(Arrays.stream(defaults.serverProperties()), Arrays.stream(clusterTest.serverProperties()))
             .filter(e -> e.id() == -1)
             .collect(Collectors.toMap(ClusterConfigProperty::key, ClusterConfigProperty::value, (a, b) -> b));
@@ -284,8 +295,11 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
         Map<Feature, Short> features = Arrays.stream(clusterTest.features())
             .collect(Collectors.toMap(ClusterFeature::feature, ClusterFeature::version));
 
-        ClusterConfig config = ClusterConfig.builder()
+        String[] containerImages = resolveContainerImages(context, clusterTest);
+
+        ClusterConfig.Builder baseBuilder = ClusterConfig.builder()
             .setTypes(Set.of(types))
+            .setExecutionModes(Set.of(executionModes))
             .setBrokers(clusterTest.brokers() == 0 ? defaults.brokers() : clusterTest.brokers())
             .setControllers(clusterTest.controllers() == 0 ? defaults.controllers() : clusterTest.controllers())
             .setDisksPerBroker(clusterTest.disksPerBroker() == 0 ? defaults.disksPerBroker() : clusterTest.disksPerBroker())
@@ -299,12 +313,54 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
             .setMetadataVersion(clusterTest.metadataVersion())
             .setTags(List.of(clusterTest.tags()))
             .setFeatures(features)
-            .setStandalone(clusterTest.standalone())
-            .build();
+            .setStandalone(clusterTest.standalone());
 
-        return Arrays.stream(types)
-            .map(type -> invocationContextForClusterType(type, context.getRequiredTestMethod().getName(), config))
+        // When no container images are specified, produce a single config without a container image.
+        // Otherwise, fan out: one config per container image (Cartesian product with types x executionModes).
+        Stream<ClusterConfig> configs;
+        if (containerImages.length == 0) {
+            configs = Stream.of(baseBuilder.build());
+        } else {
+            configs = Arrays.stream(containerImages)
+                .map(image -> baseBuilder.copy().setContainerImage(image).build());
+        }
+
+        String baseDisplayName = context.getRequiredTestMethod().getName();
+        return configs
+            .flatMap(config -> config.clusterTypes().stream()
+                .flatMap(type -> config.executionModes().stream()
+                    .map(exec -> invocationContextFor(type, exec, baseDisplayName, config))))
             .collect(Collectors.toList());
+    }
+
+    @SuppressWarnings("unchecked")
+    private String[] resolveContainerImages(ExtensionContext context, ClusterTest clusterTest) {
+        String[] literal = clusterTest.containerImages();
+        String source = clusterTest.containerImageSource();
+        if (source.isEmpty()) {
+            return literal;
+        }
+
+        Object testInstance = context.getTestInstance().orElse(null);
+        Method method = ReflectionUtils.getRequiredMethod(context.getRequiredTestClass(), source);
+        Object result = ReflectionUtils.invokeMethod(method, testInstance);
+
+        String[] fromSource;
+        if (result instanceof String[] arr) {
+            fromSource = arr;
+        } else if (result instanceof List<?> list) {
+            fromSource = ((List<String>) list).toArray(new String[0]);
+        } else {
+            throw new IllegalStateException(
+                "containerImageSource method '" + source + "' must return String[] or List<String>");
+        }
+
+        // Merge literal containerImages with the source result
+        if (literal.length == 0) {
+            return fromSource;
+        }
+        return Stream.concat(Arrays.stream(literal), Arrays.stream(fromSource))
+            .toArray(String[]::new);
     }
 
     private ClusterTestDefaults getClusterTestDefaults(Class<?> testClass) {

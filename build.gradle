@@ -1763,7 +1763,7 @@ project(':test-common:test-common-runtime') {
     implementation libs.junitJupiter
     implementation libs.jacksonDataformatYaml
     implementation libs.slf4jApi
-    implementation testFixtures(project(':clients'))
+    implementation libs.testcontainers
 
     testImplementation testFixtures(project(':clients'))
     testImplementation libs.junitJupiter
@@ -1775,6 +1775,39 @@ project(':test-common:test-common-runtime') {
 
   checkstyle {
     configProperties = checkstyleConfigProperties("import-control-test-common-runtime.xml")
+  }
+
+  javadoc {
+    enabled = false
+  }
+}
+
+project(':systemtests') {
+  base {
+    archivesName = "kafka-systemtests"
+  }
+
+  dependencies {
+    testImplementation project(':clients')
+    testImplementation project(':test-common:test-common-internal-api')
+    testImplementation project(':test-common:test-common-runtime')
+    testImplementation libs.junitJupiter
+    testImplementation libs.testcontainers
+    testImplementation libs.slf4jApi
+    testImplementation testLog4j2Libs
+
+    testRuntimeOnly runtimeTestLibs
+  }
+
+  test {
+    enabled = project.hasProperty('containerTests') || System.getenv('CONTAINER_TESTS') != null
+    // TODO: for testcontainer tests running in parallel brings a lot of more complexity ...
+    //       let's start with sequential model ... and then we can alternate.
+    maxParallelForks = 1
+  }
+
+  checkstyle {
+    configProperties = checkstyleConfigProperties("import-control-systemtests.xml")
   }
 
   javadoc {

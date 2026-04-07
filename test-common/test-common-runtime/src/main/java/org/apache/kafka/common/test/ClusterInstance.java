@@ -46,6 +46,7 @@ import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.test.api.ClusterConfig;
 import org.apache.kafka.common.test.api.ClusterTest;
+import org.apache.kafka.common.test.api.ExecutionMode;
 import org.apache.kafka.common.test.api.Type;
 import org.apache.kafka.server.authorizer.Authorizer;
 import org.apache.kafka.server.fault.FaultHandlerException;
@@ -74,6 +75,8 @@ import static org.apache.kafka.clients.consumer.GroupProtocol.CONSUMER;
 public interface ClusterInstance {
 
     Type type();
+
+    ExecutionMode executionMode();
 
     Map<Integer, KafkaBroker> brokers();
 
