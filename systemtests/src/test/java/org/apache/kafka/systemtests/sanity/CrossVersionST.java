@@ -33,7 +33,6 @@ import org.apache.kafka.common.test.api.Type;
 import org.apache.kafka.systemtests.KafkaVersions;
 
 import org.junit.jupiter.api.Timeout;
-import org.testcontainers.shaded.org.bouncycastle.pqc.legacy.math.linearalgebra.Matrix;
 
 import java.time.Duration;
 import java.util.ArrayList;

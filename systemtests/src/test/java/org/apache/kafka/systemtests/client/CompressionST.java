@@ -32,11 +32,17 @@ import org.apache.kafka.common.test.api.ClusterTests;
 import org.apache.kafka.common.test.api.ExecutionMode;
 import org.apache.kafka.common.test.api.Type;
 
+import org.junit.jupiter.api.Timeout;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.apache.kafka.clients.consumer.ConsumerConfig.AUTO_OFFSET_RESET_CONFIG;
 import static org.apache.kafka.clients.consumer.ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG;
 import static org.apache.kafka.clients.consumer.ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG;
 import static org.apache.kafka.clients.producer.ProducerConfig.ACKS_CONFIG;
@@ -46,14 +52,22 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests produce/consume for all compression types: snappy, gzip, lz4, zstd, none.
- * Each compression type is tested with a separate cluster config using tags to carry
- * the compression type to the test method.
+ *
+ * <p>Two test variants:
+ * <ul>
+ *   <li>{@code testCompressedTopic} -- each compression type tested in isolation (one per invocation)</li>
+ *   <li>{@code testAllCompressionsConcurrently} -- all compression types produced concurrently
+ *       to the same topic, mirroring the Ducktape CompressionTest behavior</li>
+ * </ul>
  */
 @ClusterTestDefaults(executionModes = {ExecutionMode.CONTAINER})
 public class CompressionST {
 
+    private static final String[] COMPRESSION_TYPES = {"snappy", "gzip", "lz4", "zstd", "none"};
     private static final int NUM_MESSAGES = 1000;
     private static final int NUM_PARTITIONS = 10;
+
+    // --- Per-compression-type isolated tests ---
 
     @ClusterTests({
         @ClusterTest(types = {Type.CO_KRAFT, Type.KRAFT}, tags = {"compression=snappy"}),
@@ -72,33 +86,77 @@ public class CompressionST {
         String topicName = "compression-test-" + compressionType;
         cluster.createTopic(topicName, NUM_PARTITIONS, (short) 1);
 
-        // Produce messages with the specified compression type
+        produceMessages(cluster, topicName, compressionType, NUM_MESSAGES);
+        List<ConsumerRecord<String, String>> records = consumeMessages(cluster, topicName, NUM_MESSAGES,
+            "Failed to consume all " + NUM_MESSAGES + " messages with compression=" + compressionType);
+
+        assertEquals(NUM_MESSAGES, records.size(),
+            "Expected " + NUM_MESSAGES + " messages with compression=" + compressionType);
+    }
+
+    // --- Concurrent all-compression test (mirrors Ducktape CompressionTest) ---
+
+    @Timeout(120)
+    @ClusterTest(types = {Type.KRAFT}, controllers = 5, brokers = 5)
+    void testAllCompressionsConcurrently(ClusterInstance cluster) throws Exception {
+        String topicName = "compression-concurrent-test";
+        cluster.createTopic(topicName, NUM_PARTITIONS, (short) 1);
+
+        int expectedTotal = NUM_MESSAGES * COMPRESSION_TYPES.length;
+        AtomicInteger producedCount = new AtomicInteger(0);
+
+        // Launch one producer per compression type, all producing concurrently to the same topic
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        for (String compressionType : COMPRESSION_TYPES) {
+            futures.add(CompletableFuture.runAsync(() -> {
+                produceMessages(cluster, topicName, compressionType, NUM_MESSAGES);
+                producedCount.addAndGet(NUM_MESSAGES);
+            }));
+        }
+
+        // Wait for all producers to finish
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        assertEquals(expectedTotal, producedCount.get(), "Not all producers completed successfully");
+
+        // Consume all messages from all compression types
+        List<ConsumerRecord<String, String>> records = consumeMessages(cluster, topicName, expectedTotal,
+            "Failed to consume all " + expectedTotal + " messages from concurrent compression producers");
+
+        assertEquals(expectedTotal, records.size(),
+            "Expected " + expectedTotal + " messages from " + COMPRESSION_TYPES.length + " concurrent producers");
+    }
+
+    // --- Helpers ---
+
+    private void produceMessages(ClusterInstance cluster, String topicName, String compressionType, int count) {
         try (Producer<String, String> producer = cluster.producer(Map.of(
                 ACKS_CONFIG, "all",
                 KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName(),
                 VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName(),
                 ProducerConfig.COMPRESSION_TYPE_CONFIG, compressionType))
         ) {
-            for (int i = 0; i < NUM_MESSAGES; i++) {
-                producer.send(new ProducerRecord<>(topicName, "key-" + i, "value-" + i));
+            for (int i = 0; i < count; i++) {
+                producer.send(new ProducerRecord<>(topicName, compressionType + "-key-" + i, "value-" + i));
             }
             producer.flush();
         }
+    }
 
-        // Consume and verify all messages
+    private List<ConsumerRecord<String, String>> consumeMessages(
+            ClusterInstance cluster, String topicName, int expectedCount, String errorMessage)
+            throws InterruptedException {
+        List<ConsumerRecord<String, String>> records = new CopyOnWriteArrayList<>();
         try (Consumer<String, String> consumer = cluster.consumer(Map.of(
+                AUTO_OFFSET_RESET_CONFIG, "earliest",
                 KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName(),
                 VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName()))
         ) {
             consumer.subscribe(List.of(topicName));
-            List<ConsumerRecord<String, String>> records = new ArrayList<>();
             TestUtils.waitForCondition(() -> {
                 consumer.poll(Duration.ofMillis(500)).forEach(records::add);
-                return records.size() >= NUM_MESSAGES;
-            }, 60_000L, "Failed to consume all " + NUM_MESSAGES + " messages with compression=" + compressionType);
-
-            assertEquals(NUM_MESSAGES, records.size(),
-                "Expected " + NUM_MESSAGES + " messages with compression=" + compressionType);
+                return records.size() >= expectedCount;
+            }, 60_000L, errorMessage);
         }
+        return records;
     }
 }
