@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * A {@link Records} implementation backed by a ByteBuffer. This is used only for reading or
@@ -137,7 +138,25 @@ public class MemoryRecords extends AbstractRecords {
      * @return A FilterResult with a summary of the output (for metrics) and potentially an overflow buffer
      */
     public FilterResult filterTo(RecordFilter filter, ByteBuffer destinationBuffer, BufferSupplier decompressionBufferSupplier) {
-        return filterTo(batches(), filter, destinationBuffer, decompressionBufferSupplier);
+        return filterTo(batches(), filter, destinationBuffer, decompressionBufferSupplier, Optional.empty());
+    }
+
+    /**
+     * Filter the records into the provided ByteBuffer, using the specified topic-level compression
+     * when re-compressing retained records.
+     *
+     * @param filter                      The filter function
+     * @param destinationBuffer           The byte buffer to write the filtered records to
+     * @param decompressionBufferSupplier The supplier of ByteBuffer(s) used for decompression
+     * @param topicCompression            The topic-configured compression (includes level and other
+     *                                    fine-tuned parameters). When present and the codec type matches
+     *                                    the original batch, its parameters are used for re-compression
+     *                                    instead of codec defaults.
+     * @return A FilterResult with a summary of the output (for metrics) and potentially an overflow buffer
+     */
+    public FilterResult filterTo(RecordFilter filter, ByteBuffer destinationBuffer,
+                                 BufferSupplier decompressionBufferSupplier, Optional<Compression> topicCompression) {
+        return filterTo(batches(), filter, destinationBuffer, decompressionBufferSupplier, topicCompression);
     }
 
     /**
@@ -145,7 +164,8 @@ public class MemoryRecords extends AbstractRecords {
      * to the delete horizon of the tombstones or txn markers which are present in the batch.
      */
     private static FilterResult filterTo(Iterable<MutableRecordBatch> batches, RecordFilter filter,
-                                         ByteBuffer destinationBuffer, BufferSupplier decompressionBufferSupplier) {
+                                         ByteBuffer destinationBuffer, BufferSupplier decompressionBufferSupplier,
+                                         Optional<Compression> topicCompression) {
         FilterResult filterResult = new FilterResult(destinationBuffer);
         ByteBufferOutputStream bufferOutputStream = new ByteBufferOutputStream(destinationBuffer);
         for (MutableRecordBatch batch : batches) {
@@ -181,7 +201,7 @@ public class MemoryRecords extends AbstractRecords {
                     else
                         deleteHorizonMs = batch.deleteHorizonMs().orElse(RecordBatch.NO_TIMESTAMP);
                     try (final MemoryRecordsBuilder builder = buildRetainedRecordsInto(batch, retainedRecords,
-                            bufferOutputStream, deleteHorizonMs)) {
+                            bufferOutputStream, deleteHorizonMs, topicCompression)) {
                         MemoryRecords records = builder.build();
                         int filteredBatchSize = records.sizeInBytes();
                         MemoryRecordsBuilder.RecordsInfo info = builder.info();
@@ -263,8 +283,11 @@ public class MemoryRecords extends AbstractRecords {
     private static MemoryRecordsBuilder buildRetainedRecordsInto(RecordBatch originalBatch,
                                                                  List<Record> retainedRecords,
                                                                  ByteBufferOutputStream bufferOutputStream,
-                                                                 final long deleteHorizonMs) {
-        Compression compression = Compression.of(originalBatch.compressionType()).build();
+                                                                 final long deleteHorizonMs,
+                                                                 Optional<Compression> topicCompression) {
+        Compression compression = topicCompression
+                .filter(tc -> tc.type() == originalBatch.compressionType())
+                .orElse(Compression.of(originalBatch.compressionType()).build());
         // V0 has no timestamp type or timestamp, so we set the timestamp to CREATE_TIME and timestamp to NO_TIMESTAMP.
         // Note that this differs from produce up-conversion where the timestamp type topic config is used and the log append
         // time is generated if the config is LOG_APPEND_TIME. The reason for the different behavior is that there is

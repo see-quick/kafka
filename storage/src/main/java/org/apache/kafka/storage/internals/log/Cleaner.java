@@ -18,6 +18,7 @@ package org.apache.kafka.storage.internals.log;
 
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.compress.Compression;
 import org.apache.kafka.common.errors.CorruptRecordException;
 import org.apache.kafka.common.message.AbortedTxn;
 import org.apache.kafka.common.record.internal.FileLogInputStream.FileChannelRecordBatch;
@@ -286,7 +287,8 @@ public class Cleaner {
                             lastOffsetOfActiveProducers,
                             upperBoundOffsetOfCleaningRound,
                             stats,
-                            currentTime
+                            currentTime,
+                            log.config().compression
                     );
 
                     if (overflowOpt.isPresent()) {
@@ -362,6 +364,9 @@ public class Cleaner {
      * @param upperBoundOffsetOfCleaningRound Next offset of the last batch in the source segment
      * @param stats Collector for cleaning statistics
      * @param currentTime The time at which the clean was initiated
+     * @param topicCompression The topic-configured compression (includes fine-tuned parameters like level).
+     *                         When present and the codec type matches the original batch, its parameters
+     *                         are used for re-compression instead of codec defaults.
      *
      * @return {@code Optional.of(position)} if the destination segment would overflow (position is where overflow
      *         was detected in the source), or {@code Optional.empty()} if cleaning completed normally
@@ -378,7 +383,8 @@ public class Cleaner {
                            Map<Long, LastRecord> lastRecordsOfActiveProducers,
                            long upperBoundOffsetOfCleaningRound,
                            CleanerStats stats,
-                           long currentTime) throws IOException {
+                           long currentTime,
+                           Optional<Compression> topicCompression) throws IOException {
         MemoryRecords.RecordFilter logCleanerFilter = new MemoryRecords.RecordFilter(currentTime, deleteRetentionMs) {
             private boolean discardBatchRecords;
 
@@ -452,7 +458,7 @@ public class Cleaner {
             sourceRecords.readInto(readBuffer, position);
             MemoryRecords records = MemoryRecords.readableRecords(readBuffer);
             throttler.maybeThrottle(records.sizeInBytes());
-            MemoryRecords.FilterResult result = records.filterTo(logCleanerFilter, writeBuffer, decompressionBufferSupplier);
+            MemoryRecords.FilterResult result = records.filterTo(logCleanerFilter, writeBuffer, decompressionBufferSupplier, topicCompression);
 
             stats.readMessages(result.messagesRead(), result.bytesRead());
             stats.recopyMessages(result.messagesRetained(), result.bytesRetained());
