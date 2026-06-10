@@ -89,7 +89,7 @@ class NetworkDegradeTest(Test):
 
     @cluster(num_nodes=3)
     @parametrize(task_name="rate-1000", device_name="eth0", latency_ms=0, rate_limit_kbit=1000000, metadata_quorum=quorum.combined_kraft)
-    @parametrize(task_name="rate-1000-latency-50", device_name="eth0", latency_ms=50, rate_limit_kbit=1000000, metadata_quorum=quorum.combined_kraft)
+    @parametrize(task_name="rate-5000-latency-50", device_name="eth0", latency_ms=50, rate_limit_kbit=5000, metadata_quorum=quorum.combined_kraft)
     def test_rate(self, task_name, device_name, latency_ms, rate_limit_kbit, metadata_quorum=quorum.combined_kraft):
         quorum0 = self.kafka.controller_quorum.nodes[0]
         quorum1 = self.kafka.controller_quorum.nodes[1]
@@ -114,14 +114,23 @@ class NetworkDegradeTest(Test):
             break
 
         # Capture the measured kbps between the two nodes.
-        # [  3]  0.0- 1.0 sec  2952576 KBytes  24187503 Kbits/sec
+        # Interval lines look like: [  3]  0.0- 1.0 sec  2952576 KBytes  24187503 Kbits/sec
+        # Summary line looks like:  [  3]  0.0-20.0 sec  ...
         r = re.compile(r"^.*\s(?P<rate>[\d.]+)\sKbits/sec$")
+        interval_r = re.compile(r"^\[.*\]\s+(?P<start>[\d.]+)-\s*(?P<end>[\d.]+)\s+sec")
 
         measured_rates = []
         for line in quorum0.account.ssh_capture("iperf -i 1 -t 20 -f k -c %s" % quorum1.account.hostname):
             self.logger.info("iperf output %s" % line)
             m = r.match(line)
             if m is not None:
+                interval_m = interval_r.match(line)
+                if interval_m:
+                    start = float(interval_m.group("start"))
+                    end = float(interval_m.group("end"))
+                    if (end - start) > 5:
+                        self.logger.info("Skipping iperf summary line")
+                        continue
                 measured_rate = float(m.group("rate"))
                 measured_rates.append(measured_rate)
                 self.logger.info("Parsed rate of %d kbit/s from iperf" % measured_rate)
@@ -136,10 +145,13 @@ class NetworkDegradeTest(Test):
 
         self.logger.info("Measured rates: %s" % measured_rates)
 
+        # Skip the first 2 measurements to allow tc rules to settle
+        settled_rates = measured_rates[2:]
+
         # We expect to see measured rates within an order of magnitude of our target rate
         low_kbps = rate_limit_kbit // 10
         high_kbps = rate_limit_kbit * 10
-        acceptable_rates = [r for r in measured_rates if low_kbps < r < high_kbps]
+        acceptable_rates = [r for r in settled_rates if low_kbps < r < high_kbps]
 
         msg = "Expected most of the measured rates to be within an order of magnitude of target %d." % rate_limit_kbit
         msg += " This means `tc` did not limit the bandwidth as expected."

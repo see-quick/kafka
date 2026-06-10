@@ -116,13 +116,13 @@ public class DegradedNetworkFaultWorker implements TaskWorker {
             if (rateLimitKbps > 0) {
                 List<String> rate = new ArrayList<>();
                 childHandler(networkDevice, rate::add);
-                tbfRate(rateLimitKbps, rate::add);
+                tbfRate(rateLimitKbps, delayMs, rate::add);
                 platform.runCommand(rate.toArray(new String[0]));
             }
         } else if (rateLimitKbps > 0) {
             List<String> rate = new ArrayList<>();
             rootHandler(networkDevice, rate::add);
-            tbfRate(rateLimitKbps, rate::add);
+            tbfRate(rateLimitKbps, 0, rate::add);
             platform.runCommand(rate.toArray(new String[0]));
         } else {
             log.warn("Not applying any rate limiting or latency");
@@ -159,8 +159,14 @@ public class DegradedNetworkFaultWorker implements TaskWorker {
      * Construct the second part of a "tc" command that defines a tbf (token buffer filter) that will rate limit the
      * packets going through a qdisc.
      */
-    private void tbfRate(int rateLimitKbit, Consumer<String> consumer) {
-        Stream.of("tbf", "rate", String.format("%dkbit", rateLimitKbit), "burst", "1mbit", "latency", "500ms").forEach(consumer);
+    private void tbfRate(int rateLimitKbit, int netemDelayMs, Consumer<String> consumer) {
+        // burst >= rate/HZ (HZ=250 is a safe lower bound for Linux)
+        int minBurstKbit = rateLimitKbit / 250;
+        // When stacked under netem, account for the bandwidth-delay product
+        int bdpKbit = (int) ((long) rateLimitKbit * netemDelayMs / 1000);
+        int burstKbit = Math.max(Math.max(minBurstKbit, bdpKbit), 1000);
+        Stream.of("tbf", "rate", String.format("%dkbit", rateLimitKbit), "burst",
+                String.format("%dkbit", burstKbit), "latency", "500ms").forEach(consumer);
     }
 
     /**
