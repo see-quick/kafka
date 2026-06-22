@@ -51,6 +51,9 @@ public final class KafkaVersions {
     // 4.2.x
     public static final String LATEST_4_2 = "4.2.0";
 
+    // 4.3.x
+    public static final String LATEST_4_3 = "4.3.0";
+
     /**
      * Versions to include in cross-version compatibility tests.
      * Add new stable releases here as they are published to Docker Hub.
@@ -61,7 +64,8 @@ public final class KafkaVersions {
         LATEST_3_9,
         LATEST_4_0,
         LATEST_4_1,
-        LATEST_4_2
+        LATEST_4_2,
+        LATEST_4_3
     );
 
     /**
