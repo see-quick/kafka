@@ -74,6 +74,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.Tag;
 @ClusterTestDefaults(
     brokers = 3,
     serverProperties = {
@@ -99,6 +100,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         @ClusterConfigProperty(key = PRODUCER_ID_EXPIRATION_CHECK_INTERVAL_MS_CONFIG, value = "500")
     }
 )
+@Tag("integration")
 public class ProducerIdExpirationTest {
     private static final String HEADER_KEY = "transactionStatus";
     private static final byte[] COMMITTED_VALUE = "committed".getBytes(StandardCharsets.UTF_8);

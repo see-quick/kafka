@@ -34,7 +34,7 @@ import org.apache.kafka.test.TestUtils;
 import org.apache.kafka.tools.ToolsTestUtils;
 
 import org.junit.jupiter.api.Test;
-
+import org.junit.jupiter.api.Tag;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -74,6 +74,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         @ClusterConfigProperty(key = CONSUMER_GROUP_MIN_HEARTBEAT_INTERVAL_MS_CONFIG, value = "500"),
     }
 )
+@Tag("integration")
 public class DeleteConsumerGroupsTest {
 
     @Test

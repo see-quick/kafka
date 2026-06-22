@@ -24,6 +24,8 @@ import org.apache.kafka.common.test.api.ClusterTest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import org.junit.jupiter.api.Tag;
+@Tag("integration")
 public class MinInSyncReplicasConfigTest {
 
     @ClusterTest(serverProperties = {

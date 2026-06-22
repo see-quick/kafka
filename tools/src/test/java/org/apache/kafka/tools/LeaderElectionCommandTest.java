@@ -56,6 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.Tag;
 
 @ClusterTestDefaults(brokers = 3, serverProperties = {
     @ClusterConfigProperty(key = "auto.create.topics.enable", value = "false"),
@@ -63,6 +64,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
     @ClusterConfigProperty(key = "controlled.shutdown.enable", value = "true"),
     @ClusterConfigProperty(key = "offsets.topic.replication.factor", value = "2")
 })
+@Tag("integration")
 public class LeaderElectionCommandTest {
     private final ClusterInstance cluster;
     int broker2 = 1;

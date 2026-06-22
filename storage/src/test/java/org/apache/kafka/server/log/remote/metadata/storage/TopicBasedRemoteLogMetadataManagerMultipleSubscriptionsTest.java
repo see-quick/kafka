@@ -48,7 +48,9 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
+import org.junit.jupiter.api.Tag;
 @ClusterTestDefaults(brokers = 3)
+@Tag("integration")
 public class TopicBasedRemoteLogMetadataManagerMultipleSubscriptionsTest {
     private final ClusterInstance clusterInstance;
     private final Time time = Time.SYSTEM;

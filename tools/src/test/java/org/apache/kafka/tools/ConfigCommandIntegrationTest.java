@@ -72,6 +72,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 
+import org.junit.jupiter.api.Tag;
+@Tag("integration")
 public class ConfigCommandIntegrationTest {
     private final String defaultBrokerId = "0";
     private final String defaultGroupName = "group";

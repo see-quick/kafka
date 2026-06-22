@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import org.junit.jupiter.api.Tag;
 @ClusterTestDefaults(types = {Type.KRAFT},
     brokers = 4,
     serverProperties = {
@@ -49,6 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         @ClusterConfigProperty(id = 2, key = ServerConfigs.BROKER_RACK_CONFIG, value = "1"),
         @ClusterConfigProperty(id = 3, key = ServerConfigs.BROKER_RACK_CONFIG, value = "1"),
     })
+@Tag("integration")
 public class RackAwareAutoTopicCreationTest {
 
     private static final String TOPIC = "topic";

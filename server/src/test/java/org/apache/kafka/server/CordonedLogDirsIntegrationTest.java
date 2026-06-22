@@ -46,7 +46,7 @@ import org.apache.kafka.server.common.MetadataVersion;
 import org.apache.kafka.test.TestUtils;
 
 import org.junit.jupiter.api.BeforeEach;
-
+import org.junit.jupiter.api.Tag;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -69,6 +69,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @ClusterTestDefaults(
         disksPerBroker = 2
 )
+@Tag("integration")
 public class CordonedLogDirsIntegrationTest {
 
     private static final String TOPIC1 = "topic1";

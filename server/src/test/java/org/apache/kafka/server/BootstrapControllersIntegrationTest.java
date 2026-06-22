@@ -65,7 +65,7 @@ import org.apache.kafka.server.config.QuotaConfig;
 import org.apache.kafka.test.TestUtils;
 
 import org.junit.jupiter.api.Timeout;
-
+import org.junit.jupiter.api.Tag;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -90,6 +90,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Timeout(120)
 @ClusterTestDefaults(types = {Type.KRAFT})
+@Tag("integration")
 public class BootstrapControllersIntegrationTest {
     private Map<String, Object> adminConfig(ClusterInstance clusterInstance, boolean usingBootstrapControllers) {
         return usingBootstrapControllers ?

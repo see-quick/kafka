@@ -48,6 +48,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.Tag;
+@Tag("integration")
 public class LogAppendTimeTest {
     private static final String TOPIC = "log-append-time-topic";
     private static final int NUM_PARTITION = 1;

@@ -32,7 +32,7 @@ import org.apache.kafka.test.TestUtils;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-
+import org.junit.jupiter.api.Tag;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -54,6 +54,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
         types = {Type.KRAFT},
         brokers = 3
 )
+@Tag("integration")
 public class ConcurrentListOffsetsRequestTest {
     private static final String TOPIC = "topic";
     private static final short REPLICAS = 1;

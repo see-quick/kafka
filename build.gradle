@@ -689,7 +689,7 @@ subprojects {
     exclude testsToExclude
 
     useJUnitPlatform {
-      excludeTags "integration"
+      excludeTags "integration", "system"
       includeEngines 'junit-jupiter'
     }
 
@@ -1800,10 +1800,36 @@ project(':systemtests') {
   }
 
   test {
-    enabled = project.hasProperty('containerTests') || System.getenv('CONTAINER_TESTS') != null
-    // TODO: for testcontainer tests running in parallel brings a lot of more complexity ...
-    //       let's start with sequential model ... and then we can alternate.
-    maxParallelForks = 1
+    enabled = false
+  }
+
+  task systemTest(type: Test, dependsOn: compileTestJava) {
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+
+    maxParallelForks = maxTestForks
+    ignoreFailures = userIgnoreFailures
+
+    jvmArgs = defaultJvmArgs
+
+    testLogging {
+      events "passed", "skipped", "failed"
+      showStandardStreams = userShowStandardStreams ?: false
+      exceptionFormat 'full'
+      displayGranularity = 0
+    }
+
+    useJUnitPlatform {
+      includeTags "system"
+      includeEngines 'junit-jupiter'
+    }
+
+    develocity {
+      testRetry {
+        maxRetries = userMaxTestRetries
+        maxFailures = userMaxTestRetryFailures
+      }
+    }
   }
 
   checkstyle {

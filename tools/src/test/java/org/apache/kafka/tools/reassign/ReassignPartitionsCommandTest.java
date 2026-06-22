@@ -53,7 +53,7 @@ import org.apache.kafka.tools.TerseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import org.junit.jupiter.api.Assertions;
-
+import org.junit.jupiter.api.Tag;
 import java.time.Duration;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -102,6 +102,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
     @ClusterConfigProperty(id = 3, key = "broker.rack", value = "rack1"),
     @ClusterConfigProperty(id = 4, key = "broker.rack", value = "rack1"),
 })
+@Tag("integration")
 public class ReassignPartitionsCommandTest {
     private final ClusterInstance clusterInstance;
     private final Map<Integer, Map<String, Long>> unthrottledBrokerConfigs = IntStream

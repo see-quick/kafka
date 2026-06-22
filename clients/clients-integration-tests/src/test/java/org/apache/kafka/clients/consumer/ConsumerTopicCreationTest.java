@@ -35,6 +35,8 @@ import static org.apache.kafka.server.config.ServerLogConfigs.AUTO_CREATE_TOPICS
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.Tag;
+@Tag("integration")
 public class ConsumerTopicCreationTest {
     private static final String TOPIC = "topic";
     private static final long POLL_TIMEOUT = 1000;

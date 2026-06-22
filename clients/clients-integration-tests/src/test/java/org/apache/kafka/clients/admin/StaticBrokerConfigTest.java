@@ -43,6 +43,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import org.junit.jupiter.api.Tag;
+@Tag("integration")
 public class StaticBrokerConfigTest {
     private static final String TOPIC = "topic";
     private static final String CUSTOM_VALUE = "1048576";

@@ -26,7 +26,7 @@ import org.apache.kafka.common.test.api.ClusterTestDefaults;
 import org.apache.kafka.common.test.api.Type;
 
 import org.junit.jupiter.api.BeforeEach;
-
+import org.junit.jupiter.api.Tag;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -66,6 +66,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
         @ClusterConfigProperty(key = GROUP_MIN_SESSION_TIMEOUT_MS_CONFIG, value = "100"),
     }
 )
+@Tag("integration")
 public class PlaintextConsumerFetchTest {
 
     public static final int BROKER_COUNT = 3;

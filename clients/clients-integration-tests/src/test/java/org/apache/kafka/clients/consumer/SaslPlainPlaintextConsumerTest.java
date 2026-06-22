@@ -25,7 +25,7 @@ import org.apache.kafka.common.test.api.ClusterTestDefaults;
 import org.apache.kafka.common.test.api.Type;
 
 import org.junit.jupiter.api.BeforeEach;
-
+import org.junit.jupiter.api.Tag;
 import java.util.Locale;
 import java.util.Map;
 
@@ -57,6 +57,7 @@ import static org.apache.kafka.coordinator.group.GroupCoordinatorConfig.OFFSETS_
         @ClusterConfigProperty(key = SASL_MECHANISM_INTER_BROKER_PROTOCOL_CONFIG, value = MECHANISMS),
     }
 )
+@Tag("integration")
 public class SaslPlainPlaintextConsumerTest {
 
     private final ClusterInstance cluster;

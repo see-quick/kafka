@@ -35,7 +35,7 @@ import org.apache.kafka.server.policy.AlterConfigPolicy;
 import org.apache.kafka.storage.internals.log.LogConfig;
 
 import org.junit.jupiter.api.BeforeEach;
-
+import org.junit.jupiter.api.Tag;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -59,6 +59,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         @ClusterConfigProperty(key = ServerLogConfigs.ALTER_CONFIG_POLICY_CLASS_NAME_CONFIG, value = "org.apache.kafka.clients.admin.AdminClientWithPoliciesIntegrationTest$Policy"),
     }
 )
+@Tag("integration")
 public class AdminClientWithPoliciesIntegrationTest {
     private final ClusterInstance clusterInstance;
     private static List<AlterConfigPolicy.RequestMetadata> validations = new ArrayList<>();

@@ -32,6 +32,8 @@ import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import org.junit.jupiter.api.Tag;
+@Tag("integration")
 public class DynamicConfigTest {
     @ClusterTest
     public void testGroupIsRemovedWhenDynamicConfigsAreRemoved(ClusterInstance clusterInstance) throws ExecutionException, InterruptedException {

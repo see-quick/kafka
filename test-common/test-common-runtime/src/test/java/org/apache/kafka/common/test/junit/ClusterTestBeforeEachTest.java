@@ -22,11 +22,13 @@ import org.apache.kafka.common.test.api.AutoStart;
 import org.apache.kafka.common.test.api.ClusterTest;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Tag("integration")
 public class ClusterTestBeforeEachTest {
     private final ClusterInstance clusterInstance;
 

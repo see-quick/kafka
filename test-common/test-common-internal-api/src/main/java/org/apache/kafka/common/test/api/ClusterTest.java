@@ -20,7 +20,6 @@ package org.apache.kafka.common.test.api;
 import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.server.common.MetadataVersion;
 
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.Timeout;
 
@@ -38,7 +37,6 @@ import static org.apache.kafka.common.test.api.TestKitDefaults.DEFAULT_CONTROLLE
 @Retention(RUNTIME)
 @TestTemplate
 @Timeout(60)
-@Tag("integration")
 public @interface ClusterTest {
     Type[] types() default {};
     ExecutionMode[] executionModes() default {};

@@ -169,7 +169,8 @@ class ContainerClusterInstance implements ClusterInstance {
                         return false;
                     }
                 },
-                "Brokers did not become ready"
+                "Brokers did not become ready",
+                60_000L
             );
         }
     }

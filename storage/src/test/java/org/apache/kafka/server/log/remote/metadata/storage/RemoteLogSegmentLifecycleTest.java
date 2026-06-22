@@ -49,7 +49,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
+import org.junit.jupiter.api.Tag;
 @ClusterTestDefaults(brokers = 3)
+@Tag("integration")
 public class RemoteLogSegmentLifecycleTest {
 
     private final int segSize = 1048576;

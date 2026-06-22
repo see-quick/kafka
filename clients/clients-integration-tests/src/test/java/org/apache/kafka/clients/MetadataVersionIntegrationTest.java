@@ -28,6 +28,8 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import org.junit.jupiter.api.Tag;
+@Tag("integration")
 public class MetadataVersionIntegrationTest {
     @ClusterTests(value = {
         @ClusterTest(types = Type.KRAFT, metadataVersion = MetadataVersion.IBP_3_3_IV3),

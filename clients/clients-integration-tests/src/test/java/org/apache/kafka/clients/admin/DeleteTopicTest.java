@@ -53,6 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import org.junit.jupiter.api.Tag;
 
 @ClusterTestDefaults(types = {Type.KRAFT},
     brokers = 3,
@@ -62,6 +63,7 @@ import static org.junit.jupiter.api.Assertions.fail;
         @ClusterConfigProperty(key = "log.initial.task.delay.ms", value = "100"),
         @ClusterConfigProperty(key = "log.segment.delete.delay.ms", value = "1000")
     })
+@Tag("integration")
 public class DeleteTopicTest {
     private static final String DEFAULT_TOPIC = "topic";
     private final Map<Integer, List<Integer>> expectedReplicaAssignment = Map.of(0, List.of(0, 1, 2));

@@ -38,6 +38,7 @@ import java.nio.ByteBuffer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.Tag;
 /**
  * Verifies that the (bounded) memory pool releases the memory also after
  * invalid and unsupported protocol requests
@@ -46,6 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
     @ClusterConfigProperty(key = SocketServerConfigs.SOCKET_REQUEST_MAX_BYTES_CONFIG, value = "50000"),
     @ClusterConfigProperty(key = SocketServerConfigs.QUEUED_MAX_BYTES_CONFIG, value = "100000"),
 })
+@Tag("integration")
 public class SocketServerMemoryPoolTest {
     @ClusterTest
     public void testRequestWithUnsupportedVersion(ClusterInstance clusterInstance) throws Exception {

@@ -32,6 +32,7 @@ import org.apache.kafka.common.test.api.ClusterTests;
 import org.apache.kafka.common.test.api.ExecutionMode;
 import org.apache.kafka.common.test.api.Type;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Timeout;
 
 import java.time.Duration;
@@ -60,6 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *       to the same topic, mirroring the Ducktape CompressionTest behavior</li>
  * </ul>
  */
+@Tag("system")
 @ClusterTestDefaults(executionModes = {ExecutionMode.CONTAINER})
 public class CompressionST {
 

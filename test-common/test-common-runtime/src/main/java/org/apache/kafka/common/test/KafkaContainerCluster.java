@@ -265,15 +265,32 @@ public class KafkaContainerCluster implements AutoCloseable {
         LOG.info("Starting Kafka container cluster with {} brokers and {} controllers (combined={}, protocol={})",
             numBrokers, numControllers, combined, securityProtocol);
 
-        try {
-            Startables.deepStart(containers.values().stream()).get(120, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("Interrupted while starting Kafka containers", e);
-        } catch (ExecutionException e) {
-            throw new RuntimeException("Failed to start Kafka containers", e);
-        } catch (TimeoutException e) {
-            throw new RuntimeException("Timed out while starting Kafka containers", e);
+        Exception lastException = null;
+        for (int attempt = 1; attempt <= MAX_DOCKER_RETRIES; attempt++) {
+            try {
+                Startables.deepStart(containers.values().stream()).get(120, TimeUnit.SECONDS);
+                lastException = null;
+                break;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Interrupted while starting Kafka containers", e);
+            } catch (ExecutionException | TimeoutException e) {
+                lastException = e;
+                if (attempt < MAX_DOCKER_RETRIES) {
+                    LOG.warn("Failed to start Kafka containers (attempt {}/{}), retrying in {}ms",
+                        attempt, MAX_DOCKER_RETRIES, DOCKER_RETRY_BACKOFF_MS, e);
+                    recreateContainers();
+                    try {
+                        Thread.sleep(DOCKER_RETRY_BACKOFF_MS);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("Interrupted while retrying container startup", ie);
+                    }
+                }
+            }
+        }
+        if (lastException != null) {
+            throw new RuntimeException("Failed to start Kafka containers after " + MAX_DOCKER_RETRIES + " attempts", lastException);
         }
 
         runningNodeIds.addAll(containers.keySet());
@@ -351,7 +368,9 @@ public class KafkaContainerCluster implements AutoCloseable {
             throw new IllegalArgumentException("Unknown nodeId " + nodeId);
         }
         LOG.info("Stopping broker {}", nodeId);
-        DockerClientFactory.lazyClient().stopContainerCmd(container.getContainerId()).exec();
+        retryOnDockerFailure(() ->
+            DockerClientFactory.lazyClient().stopContainerCmd(container.getContainerId()).exec(),
+            "stop broker " + nodeId);
         runningNodeIds.remove(nodeId);
     }
 
@@ -371,8 +390,46 @@ public class KafkaContainerCluster implements AutoCloseable {
         }
 
         LOG.info("Starting broker {}", nodeId);
-        DockerClientFactory.lazyClient().startContainerCmd(container.getContainerId()).exec();
+        retryOnDockerFailure(() ->
+            DockerClientFactory.lazyClient().startContainerCmd(container.getContainerId()).exec(),
+            "start broker " + nodeId);
         runningNodeIds.add(nodeId);
+    }
+
+    private void recreateContainers() {
+        for (GenericContainer<?> container : containers.values()) {
+            try {
+                container.stop();
+            } catch (Exception e) {
+                LOG.warn("Error stopping container during retry cleanup", e);
+            }
+        }
+        containers.clear();
+        createContainers();
+    }
+
+    private static final int MAX_DOCKER_RETRIES = 3;
+    private static final long DOCKER_RETRY_BACKOFF_MS = 2000;
+
+    private static void retryOnDockerFailure(Runnable action, String description) {
+        for (int attempt = 1; attempt <= MAX_DOCKER_RETRIES; attempt++) {
+            try {
+                action.run();
+                return;
+            } catch (Exception e) {
+                if (attempt == MAX_DOCKER_RETRIES) {
+                    throw new RuntimeException("Failed to " + description + " after " + MAX_DOCKER_RETRIES + " attempts", e);
+                }
+                LOG.warn("Docker command '{}' failed (attempt {}/{}), retrying in {}ms",
+                    description, attempt, MAX_DOCKER_RETRIES, DOCKER_RETRY_BACKOFF_MS, e);
+                try {
+                    Thread.sleep(DOCKER_RETRY_BACKOFF_MS);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Interrupted while retrying " + description, ie);
+                }
+            }
+        }
     }
 
     /**

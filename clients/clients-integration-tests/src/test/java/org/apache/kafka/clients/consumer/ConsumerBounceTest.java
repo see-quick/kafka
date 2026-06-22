@@ -45,7 +45,7 @@ import org.apache.kafka.test.TestUtils;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.slf4j.Logger;
+import org.junit.jupiter.api.Tag;import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -101,6 +101,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         @ClusterConfigProperty(key = KRaftConfigs.BROKER_SESSION_TIMEOUT_MS_CONFIG, value = "300")
     }
 )
+@Tag("integration")
 public class ConsumerBounceTest {
 
     private final Logger logger = new LogContext("ConsumerBounceTest").logger(this.getClass());

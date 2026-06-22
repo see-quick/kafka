@@ -51,7 +51,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-
+import org.junit.jupiter.api.Tag;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +69,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @Timeout(value = 60)
+@Tag("integration")
 public class GroupsCommandTest {
 
     private final String bootstrapServer = "localhost:9092";

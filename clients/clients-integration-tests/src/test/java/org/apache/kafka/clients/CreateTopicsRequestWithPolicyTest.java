@@ -43,12 +43,14 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.Tag;
 @ClusterTestDefaults(
     brokers = 3,
     serverProperties = {
         @ClusterConfigProperty(key = ServerLogConfigs.CREATE_TOPIC_POLICY_CLASS_NAME_CONFIG, value = "org.apache.kafka.clients.CreateTopicsRequestWithPolicyTest$Policy"),
     }
 )
+@Tag("integration")
 public class CreateTopicsRequestWithPolicyTest {
 
     public static class Policy implements CreateTopicPolicy {

@@ -32,6 +32,7 @@ import org.apache.kafka.common.test.api.ExecutionMode;
 import org.apache.kafka.common.test.api.Type;
 import org.apache.kafka.systemtests.KafkaVersions;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Timeout;
 
 import java.time.Duration;
@@ -54,6 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  *
  * // TODO: just to show how it could be possibly handless and centrally modified in the KafkaVersions :))
  */
+@Tag("system")
 @ClusterTestDefaults(executionModes = {ExecutionMode.CONTAINER})
 public class CrossVersionST {
 

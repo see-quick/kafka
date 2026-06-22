@@ -31,6 +31,7 @@ import org.apache.kafka.common.test.api.ClusterTests;
 import org.apache.kafka.common.test.api.ExecutionMode;
 import org.apache.kafka.common.test.api.Type;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Timeout;
 
 import java.time.Duration;
@@ -51,6 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * Verifies that messages produced before and after a rolling restart
  * are all consumable.
  */
+@Tag("system")
 @ClusterTestDefaults(executionModes = {ExecutionMode.CONTAINER})
 public class BounceST {
 

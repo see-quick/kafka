@@ -63,6 +63,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.Tag;
 @ClusterTestDefaults(
     brokers = 5,
     serverProperties = {
@@ -71,6 +72,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         @ClusterConfigProperty(key = ReplicationConfigs.DEFAULT_REPLICATION_FACTOR_CONFIG, value = "4")
     }
 )
+@Tag("integration")
 public class EligibleLeaderReplicasIntegrationTest {
     private final ClusterInstance clusterInstance;
 

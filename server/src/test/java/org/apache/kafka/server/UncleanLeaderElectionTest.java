@@ -54,7 +54,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.slf4j.Logger;
+import org.junit.jupiter.api.Tag;import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
@@ -83,6 +83,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
             @ClusterConfigProperty(key = GroupCoordinatorConfig.OFFSETS_TOPIC_REPLICATION_FACTOR_CONFIG, value = "1")
         }
 )
+@Tag("integration")
 public class UncleanLeaderElectionTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(UncleanLeaderElectionTest.class);

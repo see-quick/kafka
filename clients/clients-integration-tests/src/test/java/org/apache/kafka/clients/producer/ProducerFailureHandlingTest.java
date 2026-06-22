@@ -57,6 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.Tag;
 
 @ClusterTestDefaults(
     types = {Type.KRAFT},
@@ -74,6 +75,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         @ClusterConfigProperty(key = OFFSETS_TOPIC_PARTITIONS_CONFIG, value = "1"),
     }
 )
+@Tag("integration")
 public class ProducerFailureHandlingTest {
 
     private final int producerBufferSize = 30000;

@@ -37,7 +37,7 @@ import org.apache.kafka.test.TestUtils;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-
+import org.junit.jupiter.api.Tag;
 import java.io.File;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -58,6 +58,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         @ClusterConfigProperty(key = "log.retention.ms", value = "-1"),
     }
 )
+@Tag("integration")
 public class ListOffsetsIntegrationTest {
     private static final String TOPIC = "topic";
     private static final String CUSTOM_CONFIG_TOPIC = "custom_topic";

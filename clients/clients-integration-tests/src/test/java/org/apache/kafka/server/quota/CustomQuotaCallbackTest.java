@@ -41,6 +41,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import org.junit.jupiter.api.Tag;
+@Tag("integration")
 public class CustomQuotaCallbackTest {
 
     private static int controllerId(Type type) {
