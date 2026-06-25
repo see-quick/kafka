@@ -1788,6 +1788,10 @@ project(':systemtests') {
   }
 
   dependencies {
+    implementation project(':clients')
+    implementation project(':test-common:test-common-internal-api')
+    implementation project(':test-common:test-common-runtime')
+
     testImplementation project(':clients')
     testImplementation project(':test-common:test-common-internal-api')
     testImplementation project(':test-common:test-common-runtime')
@@ -1807,7 +1811,7 @@ project(':systemtests') {
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
 
-    maxParallelForks = maxTestForks
+    maxParallelForks = 1
     ignoreFailures = userIgnoreFailures
 
     jvmArgs = defaultJvmArgs

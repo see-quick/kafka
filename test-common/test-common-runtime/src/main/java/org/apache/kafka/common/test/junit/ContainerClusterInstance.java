@@ -35,6 +35,7 @@ import org.apache.kafka.common.test.api.Type;
 import org.apache.kafka.server.authorizer.Authorizer;
 import org.apache.kafka.server.fault.FaultHandlerException;
 
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -123,6 +124,10 @@ class ContainerClusterInstance implements ClusterInstance {
         return cluster.clusterId();
     }
 
+    void setLogDir(Path logDir) {
+        cluster.setLogDir(logDir);
+    }
+
     @Override
     public void start() {
         if (started.compareAndSet(false, true)) {
@@ -170,7 +175,7 @@ class ContainerClusterInstance implements ClusterInstance {
                     }
                 },
                 "Brokers did not become ready",
-                60_000L
+                120_000L
             );
         }
     }

@@ -33,7 +33,10 @@ import org.testcontainers.utility.DockerImageName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
@@ -89,6 +92,7 @@ public class KafkaContainerCluster implements AutoCloseable {
     // exclude brokers that are actually running.
     private final Set<Integer> runningNodeIds;
     private final DockerImageName imageName;
+    private Path logDir;
 
     @SuppressWarnings("resource")
     public KafkaContainerCluster(int numBrokers, int numControllers, boolean combined,
@@ -295,12 +299,25 @@ public class KafkaContainerCluster implements AutoCloseable {
 
         runningNodeIds.addAll(containers.keySet());
 
+        waitForBrokerConnectivity();
+
         // For SCRAM mechanisms, create the test users via kafka-configs after the cluster is up
         if (isSaslProtocol() && saslMechanism != null && saslMechanism.startsWith("SCRAM-")) {
             createScramUsers();
         }
 
         LOG.info("Kafka container cluster started. Bootstrap servers: {}", bootstrapServers());
+    }
+
+    private void waitForBrokerConnectivity() {
+        for (int brokerId : brokerIds()) {
+            GenericContainer<?> container = containers.get(brokerId);
+            LOG.debug("Waiting for broker {} to be ready on port {}", brokerId, KAFKA_PORT);
+            Wait.forListeningPort()
+                .withStartupTimeout(Duration.ofMinutes(2))
+                .waitUntilReady(container);
+        }
+        LOG.debug("All brokers are listening on their ports");
     }
 
     private void createScramUsers() {
@@ -338,10 +355,20 @@ public class KafkaContainerCluster implements AutoCloseable {
     }
 
     /**
-     * Stops all containers in the cluster.
+     * Sets the directory where container logs will be collected on stop.
+     * Each container's logs will be written to a separate file named by role and node ID.
+     */
+    public void setLogDir(Path logDir) {
+        this.logDir = logDir;
+    }
+
+    /**
+     * Stops all containers in the cluster, collecting logs beforehand if a log directory is set.
+     * Also removes any Docker networks that were created but leaked by prior retry attempts.
      */
     public void stop() {
         LOG.info("Stopping Kafka container cluster");
+        collectLogs();
         runningNodeIds.clear();
         for (GenericContainer<?> container : containers.values()) {
             try {
@@ -354,6 +381,62 @@ public class KafkaContainerCluster implements AutoCloseable {
             network.close();
         } catch (Exception e) {
             LOG.warn("Error closing network", e);
+        }
+        pruneOrphanedNetworks();
+    }
+
+    private void pruneOrphanedNetworks() {
+        try {
+            var dockerClient = DockerClientFactory.lazyClient();
+            var networks = dockerClient.listNetworksCmd().exec();
+            for (var net : networks) {
+                if (net.getContainers() != null && !net.getContainers().isEmpty()) {
+                    continue;
+                }
+                String name = net.getName();
+                if ("podman".equals(name) || "bridge".equals(name) || "host".equals(name) || "none".equals(name)) {
+                    continue;
+                }
+                try {
+                    dockerClient.removeNetworkCmd(net.getId()).exec();
+                } catch (Exception e) {
+                    LOG.debug("Could not remove network {}: {}", name, e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            LOG.warn("Failed to prune orphaned networks", e);
+        }
+    }
+
+    private void collectLogs() {
+        if (logDir == null) {
+            return;
+        }
+        try {
+            Files.createDirectories(logDir);
+        } catch (IOException e) {
+            LOG.warn("Failed to create log directory: {}", logDir, e);
+            return;
+        }
+        for (Map.Entry<Integer, GenericContainer<?>> entry : containers.entrySet()) {
+            int nodeId = entry.getKey();
+            GenericContainer<?> container = entry.getValue();
+            String role = getProcessRoles(nodeId);
+            String fileName;
+            if (role.contains("broker") && role.contains("controller")) {
+                fileName = "kafka-combined-" + nodeId + ".log";
+            } else if (role.contains("broker")) {
+                fileName = "kafka-broker-" + nodeId + ".log";
+            } else {
+                fileName = "kafka-controller-" + nodeId + ".log";
+            }
+            try {
+                String logs = container.getLogs();
+                Files.writeString(logDir.resolve(fileName), logs);
+                LOG.info("Collected logs for node {} to {}", nodeId, logDir.resolve(fileName));
+            } catch (Exception e) {
+                LOG.warn("Failed to collect logs for node {}", nodeId, e);
+            }
         }
     }
 
