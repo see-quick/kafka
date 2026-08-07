@@ -24,11 +24,10 @@ import org.apache.kafka.common.test.api.ClusterTest;
 import org.apache.kafka.common.test.api.ClusterTestDefaults;
 import org.apache.kafka.common.test.api.Type;
 
-import org.junit.jupiter.api.Tag;
-
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
 @ClusterTestDefaults(types = {Type.KRAFT}, brokers = 2)
 public class AutoTopicCreationTest {
 

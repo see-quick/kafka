@@ -46,8 +46,6 @@ import org.apache.kafka.server.config.ServerConfigs;
 import org.apache.kafka.storage.internals.checkpoint.CleanShutdownFileHandler;
 import org.apache.kafka.test.TestUtils;
 
-import org.junit.jupiter.api.Tag;
-
 import java.io.File;
 import java.time.Duration;
 import java.util.ArrayList;

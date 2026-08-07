@@ -25,8 +25,6 @@ import org.apache.kafka.common.test.api.ClusterTest;
 import org.apache.kafka.common.test.api.ClusterTestDefaults;
 import org.apache.kafka.common.test.api.Type;
 
-import org.junit.jupiter.api.Tag;
-
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;

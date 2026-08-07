@@ -44,8 +44,6 @@ import org.apache.kafka.server.common.Feature;
 import org.apache.kafka.server.common.MetadataVersion;
 import org.apache.kafka.test.TestUtils;
 
-import org.junit.jupiter.api.Tag;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Duration;

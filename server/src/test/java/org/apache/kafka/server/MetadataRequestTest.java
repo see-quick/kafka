@@ -41,8 +41,6 @@ import org.apache.kafka.metadata.LeaderAndIsr;
 import org.apache.kafka.server.config.ReplicationConfigs;
 import org.apache.kafka.test.TestUtils;
 
-import org.junit.jupiter.api.Tag;
-
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
