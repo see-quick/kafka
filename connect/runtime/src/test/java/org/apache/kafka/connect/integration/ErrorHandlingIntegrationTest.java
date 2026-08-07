@@ -30,6 +30,7 @@ import org.apache.kafka.connect.util.clusters.EmbeddedConnectCluster;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -67,7 +68,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * Integration test for the different error handling policies in Connect (namely, retry policies, skipping bad records,
  * and dead letter queues).
  */
-
+@Tag("integration")
 @Timeout(value = 600)
 public class ErrorHandlingIntegrationTest {
     

@@ -21,6 +21,7 @@ import org.apache.kafka.common.utils.Utils;
 import org.apache.kafka.server.fault.MockFaultHandler;
 import org.apache.kafka.server.util.FileLock;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -40,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 
 @Timeout(120)
+@Tag("integration")
 public class MetadataShellIntegrationTest {
     private static final Logger LOG = LoggerFactory.getLogger(MetadataShellIntegrationTest.class);
 

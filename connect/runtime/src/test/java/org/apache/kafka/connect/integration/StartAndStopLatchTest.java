@@ -22,6 +22,7 @@ import org.apache.kafka.common.utils.Time;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -34,7 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-
+@Tag("integration")
 public class StartAndStopLatchTest {
 
     private final AtomicBoolean completed = new AtomicBoolean();

@@ -47,7 +47,7 @@ import org.apache.kafka.server.fault.{FaultHandler, MockFaultHandler}
 import org.apache.kafka.server.util.ServerTestUtils
 import org.apache.kafka.server.util.timer.SystemTimer
 import org.junit.jupiter.api.Assertions._
-import org.junit.jupiter.api.{AfterAll, AfterEach, BeforeAll, BeforeEach, TestInfo}
+import org.junit.jupiter.api.{AfterAll, AfterEach, BeforeAll, BeforeEach, Tag, TestInfo}
 import org.junit.jupiter.params.provider.Arguments
 
 import java.nio.file.{Files, Paths}
@@ -143,7 +143,7 @@ class QuorumTestHarnessFaultHandlerFactory(
   ): FaultHandler = faultHandler
 }
 
-
+@Tag("integration")
 abstract class QuorumTestHarness extends Logging {
 
   /**

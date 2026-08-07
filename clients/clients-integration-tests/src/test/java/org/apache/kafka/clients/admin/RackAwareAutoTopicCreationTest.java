@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
 @ClusterTestDefaults(types = {Type.KRAFT},
     brokers = 4,
     serverProperties = {

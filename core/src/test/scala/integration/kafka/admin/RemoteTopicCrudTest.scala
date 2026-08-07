@@ -23,13 +23,14 @@ import org.apache.kafka.common.config.{ConfigException, TopicConfig}
 import org.apache.kafka.server.config.ServerLogConfigs
 import org.apache.kafka.server.log.remote.storage._
 import org.junit.jupiter.api.Assertions._
-import org.junit.jupiter.api.{BeforeEach, Test, TestInfo}
+import org.junit.jupiter.api.{BeforeEach, Tag, Test, TestInfo}
 
 import java.util
 import java.util.Properties
 import scala.collection.Seq
 import scala.util.Random
 
+@Tag("integration")
 class RemoteTopicCrudTest extends IntegrationTestHarness {
 
   val numPartitions = 2

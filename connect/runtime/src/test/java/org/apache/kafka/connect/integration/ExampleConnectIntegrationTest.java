@@ -22,6 +22,7 @@ import org.apache.kafka.connect.util.clusters.EmbeddedConnectCluster;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * The following test configures and executes up a sink connector pipeline in a worker, produces messages into
  * the source topic-partitions, and demonstrates how to check the overall behavior of the pipeline.
  */
-
+@Tag("integration")
 public class ExampleConnectIntegrationTest {
 
     private static final Logger log = LoggerFactory.getLogger(ExampleConnectIntegrationTest.class);

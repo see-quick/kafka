@@ -25,6 +25,7 @@ import org.apache.kafka.connect.util.clusters.EmbeddedConnectCluster;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
@@ -53,7 +54,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Integration test for sink connectors
  */
-
+@Tag("integration")
 public class SinkConnectorsIntegrationTest {
 
     private static final int NUM_TASKS = 1;

@@ -56,6 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+
 @ClusterTestDefaults(brokers = 3, serverProperties = {
     @ClusterConfigProperty(key = "auto.create.topics.enable", value = "false"),
     @ClusterConfigProperty(key = "auto.leader.rebalance.enable", value = "false"),

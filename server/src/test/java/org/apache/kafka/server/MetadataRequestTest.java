@@ -70,6 +70,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         @ClusterConfigProperty(id = 2, key = "broker.rack", value = "rack/2")
     }
 )
+
 public class MetadataRequestTest {
 
     private final ClusterInstance clusterInstance;

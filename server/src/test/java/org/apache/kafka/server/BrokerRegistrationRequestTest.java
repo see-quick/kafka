@@ -53,7 +53,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * This test simulates a broker registering with the KRaft quorum under different configurations.
  */
-
 class BrokerRegistrationRequestTest {
     private final ClusterInstance clusterInstance;
     public BrokerRegistrationRequestTest(ClusterInstance clusterInstance) {

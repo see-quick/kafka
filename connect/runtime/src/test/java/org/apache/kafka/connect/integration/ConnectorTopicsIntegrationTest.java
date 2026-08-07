@@ -29,6 +29,7 @@ import org.apache.kafka.connect.util.clusters.EmbeddedConnectCluster;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -61,7 +62,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Integration test for the endpoints that offer topic tracking of a connector's active
  * topics.
  */
-
+@Tag("integration")
 public class ConnectorTopicsIntegrationTest {
 
     private static final int NUM_WORKERS = 5;

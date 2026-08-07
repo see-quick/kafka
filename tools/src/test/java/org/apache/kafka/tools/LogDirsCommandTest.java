@@ -45,7 +45,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-
 public class LogDirsCommandTest {
     private static final String TOPIC = "test-log-dirs-topic";
 

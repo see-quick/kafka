@@ -23,6 +23,7 @@ import org.apache.kafka.connect.util.clusters.WorkerHandle;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Integration test for the creation of internal topics.
  */
-
+@Tag("integration")
 public class InternalTopicsIntegrationTest {
 
     private static final Logger log = LoggerFactory.getLogger(InternalTopicsIntegrationTest.class);

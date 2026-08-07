@@ -40,6 +40,7 @@ import org.apache.kafka.server.common.serialization.RecordSerde;
 import org.apache.kafka.snapshot.RecordsSnapshotReader;
 import org.apache.kafka.snapshot.SnapshotReader;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -97,7 +98,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * This ensures that logging output will only include output from a single
  * simulation execution.
  */
-
+@Tag("integration")
 public class RaftEventSimulationTest {
     private static final TopicPartition METADATA_PARTITION = new TopicPartition("__cluster_metadata", 0);
     private static final int ELECTION_TIMEOUT_MS = 1000;

@@ -28,6 +28,7 @@ import org.apache.kafka.connect.util.clusters.EmbeddedConnectCluster;
 import org.apache.kafka.connect.util.clusters.WorkerHandle;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -50,7 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * A simple integration test to ensure that REST extensions are registered correctly.
  */
-
+@Tag("integration")
 public class RestExtensionIntegrationTest {
 
     private static final long REST_EXTENSION_REGISTRATION_TIMEOUT_MS = TimeUnit.MINUTES.toMillis(1);
