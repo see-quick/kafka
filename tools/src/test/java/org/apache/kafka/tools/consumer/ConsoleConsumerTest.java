@@ -92,7 +92,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-
 public class ConsoleConsumerTest {
 
     private final String topic = "test-topic";

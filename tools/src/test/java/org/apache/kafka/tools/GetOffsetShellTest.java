@@ -61,12 +61,12 @@ import static org.apache.kafka.common.test.api.Type.KRAFT;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
 @ClusterTestDefaults(serverProperties = {
     @ClusterConfigProperty(key = "auto.create.topics.enable", value = "false"),
     @ClusterConfigProperty(key = "offsets.topic.replication.factor", value = "1"),
     @ClusterConfigProperty(key = "offsets.topic.num.partitions", value = "4")
 })
-
 public class GetOffsetShellTest {
     private final int topicCount = 4;
     private final ClusterInstance cluster;

@@ -92,7 +92,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
             @ClusterConfigProperty(key = AUTHORIZER_CLASS_NAME_CONFIG, value = AclCommandTest.STANDARD_AUTHORIZER)}
 
 )
-
 public class AclCommandTest {
     public static final String STANDARD_AUTHORIZER = "org.apache.kafka.metadata.authorizer.StandardAuthorizer";
     private static final String LOCALHOST = "localhost:9092";

@@ -42,7 +42,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-
 public class FeatureCommandTest {
 
     private final List<Feature> testingFeatures = Arrays.stream(Feature.FEATURES).toList();

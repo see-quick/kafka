@@ -69,7 +69,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @Timeout(value = 60)
-
 public class GroupsCommandTest {
 
     private final String bootstrapServer = "localhost:9092";

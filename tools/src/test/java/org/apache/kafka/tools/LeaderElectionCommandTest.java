@@ -62,7 +62,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
     @ClusterConfigProperty(key = "controlled.shutdown.enable", value = "true"),
     @ClusterConfigProperty(key = "offsets.topic.replication.factor", value = "2")
 })
-
 public class LeaderElectionCommandTest {
     private final ClusterInstance cluster;
     int broker2 = 1;

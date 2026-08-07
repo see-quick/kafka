@@ -17,6 +17,7 @@
 
 package org.apache.kafka.common.test.api;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.Timeout;
 
@@ -57,6 +58,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Retention(RUNTIME)
 @TestTemplate
 @Timeout(60)
+@Tag("integration")
 public @interface ClusterTemplate {
     /**
      * Specify the static method used for generating cluster configs

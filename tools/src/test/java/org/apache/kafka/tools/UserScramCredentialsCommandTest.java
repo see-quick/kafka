@@ -32,8 +32,8 @@ import static org.apache.kafka.tools.ToolsTestUtils.captureStandardOut;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-@SuppressWarnings("dontUseSystemExit")
 
+@SuppressWarnings("dontUseSystemExit")
 public class UserScramCredentialsCommandTest {
     private static final String USER1 = "user1";
     private static final String USER2 = "user2";
