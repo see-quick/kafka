@@ -25,14 +25,14 @@ import org.apache.kafka.common.test.ClusterInstance;
 import org.apache.kafka.common.test.api.ClusterTest;
 import org.apache.kafka.test.TestUtils;
 
+import org.junit.jupiter.api.Tag;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import org.junit.jupiter.api.Tag;
 @Tag("integration")
 public class DynamicConfigTest {
     @ClusterTest

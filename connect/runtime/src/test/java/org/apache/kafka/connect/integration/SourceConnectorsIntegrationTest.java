@@ -22,7 +22,6 @@ import org.apache.kafka.connect.util.clusters.EmbeddedConnectCluster;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -50,7 +49,7 @@ import static org.apache.kafka.connect.util.clusters.EmbeddedConnectCluster.DEFA
  * Integration test for source connectors with a focus on topic creation with custom properties by
  * the connector tasks.
  */
-@Tag("integration")
+
 public class SourceConnectorsIntegrationTest {
 
     private static final int NUM_WORKERS = 3;

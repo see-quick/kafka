@@ -30,7 +30,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Tag;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -45,7 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@Tag("integration")
+
 public class LogDirsCommandTest {
     private static final String TOPIC = "test-log-dirs-topic";
 

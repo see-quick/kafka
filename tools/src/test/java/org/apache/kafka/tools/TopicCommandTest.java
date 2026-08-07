@@ -62,7 +62,7 @@ import org.apache.kafka.test.TestUtils;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Tag;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -99,7 +99,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@Tag("integration")
+
 public class TopicCommandTest {
     private final short defaultReplicationFactor = 1;
     private final int defaultNumPartitions = 1;

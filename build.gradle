@@ -1764,6 +1764,7 @@ project(':test-common:test-common-runtime') {
     implementation libs.jacksonDataformatYaml
     implementation libs.slf4jApi
     implementation libs.testcontainers
+    implementation testFixtures(project(':clients'))
 
     testImplementation testFixtures(project(':clients'))
     testImplementation libs.junitJupiter

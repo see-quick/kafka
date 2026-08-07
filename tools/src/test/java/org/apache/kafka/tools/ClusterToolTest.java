@@ -34,7 +34,7 @@ import org.apache.kafka.test.TestUtils;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Tag;import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
@@ -56,7 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@Tag("integration")
+
 public class ClusterToolTest {
 
     @ClusterTest

@@ -24,7 +24,6 @@ import org.apache.kafka.connect.util.clusters.EmbeddedConnectCluster;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
@@ -59,7 +58,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Test connectors restart API use cases.
  */
-@Tag("integration")
+
 public class ConnectorRestartApiIntegrationTest {
     private static final Logger log = LoggerFactory.getLogger(ConnectorRestartApiIntegrationTest.class);
 

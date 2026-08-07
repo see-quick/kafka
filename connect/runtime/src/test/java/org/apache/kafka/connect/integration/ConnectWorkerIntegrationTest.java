@@ -47,7 +47,6 @@ import org.apache.kafka.test.TestUtils;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.io.TempDir;
@@ -108,7 +107,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Test simple operations on the workers of a Connect cluster.
  */
-@Tag("integration")
+
 public class ConnectWorkerIntegrationTest {
     private static final Logger log = LoggerFactory.getLogger(ConnectWorkerIntegrationTest.class);
 

@@ -35,8 +35,6 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.jupiter.api.Tag;
-@Tag("integration")
 public class MetricsDuringTopicCreationDeletionTest {
 
     private static final String TOPIC_NAME_PREFIX = "topic";

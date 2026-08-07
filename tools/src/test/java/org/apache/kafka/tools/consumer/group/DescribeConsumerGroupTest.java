@@ -48,7 +48,7 @@ import org.apache.kafka.tools.ToolsTestUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.Tag;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -89,7 +89,7 @@ import static org.junit.jupiter.api.Assertions.fail;
         @ClusterConfigProperty(key = CONSUMER_GROUP_MIN_HEARTBEAT_INTERVAL_MS_CONFIG, value = "500"),
     }
 )
-@Tag("integration")
+
 public class DescribeConsumerGroupTest {
     private static final String TOPIC_PREFIX = "test.topic.";
     private static final String GROUP_PREFIX = "test.group.";

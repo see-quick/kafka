@@ -23,7 +23,6 @@ import org.apache.kafka.test.TestUtils;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -42,7 +41,7 @@ import static org.apache.kafka.connect.file.FileStreamSourceTask.POSITION_FIELD;
 import static org.apache.kafka.connect.runtime.ConnectorConfig.CONNECTOR_CLASS_CONFIG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@Tag("integration")
+
 public class FileStreamSourceConnectorIntegrationTest {
 
     private static final String CONNECTOR_NAME = "test-connector";

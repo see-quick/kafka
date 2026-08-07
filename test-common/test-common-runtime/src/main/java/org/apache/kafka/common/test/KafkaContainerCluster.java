@@ -17,21 +17,20 @@
 
 package org.apache.kafka.common.test;
 
-import com.github.dockerjava.api.command.InspectContainerResponse;
-
 import org.apache.kafka.common.security.auth.SecurityProtocol;
 
+import com.github.dockerjava.api.command.InspectContainerResponse;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.images.builder.Transferable;
 import org.testcontainers.lifecycle.Startables;
-import org.testcontainers.DockerClientFactory;
 import org.testcontainers.utility.DockerImageName;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

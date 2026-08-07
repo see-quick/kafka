@@ -30,7 +30,7 @@ import org.apache.kafka.common.test.api.Type;
 import org.apache.kafka.test.TestUtils;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
+
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
@@ -69,7 +69,7 @@ import static org.junit.jupiter.api.Assertions.fail;
         @ClusterConfigProperty(key = GROUP_INITIAL_REBALANCE_DELAY_MS_CONFIG, value = "10"),
     }
 )
-@Tag("integration")
+
 public class PlaintextConsumerSubscriptionTest {
 
     public static final int BROKER_COUNT = 3;

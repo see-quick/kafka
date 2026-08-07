@@ -40,7 +40,7 @@ import org.apache.kafka.test.TestUtils;
 
 import org.apache.logging.log4j.Level;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Tag;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -92,7 +92,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
             @ClusterConfigProperty(key = AUTHORIZER_CLASS_NAME_CONFIG, value = AclCommandTest.STANDARD_AUTHORIZER)}
 
 )
-@Tag("integration")
+
 public class AclCommandTest {
     public static final String STANDARD_AUTHORIZER = "org.apache.kafka.metadata.authorizer.StandardAuthorizer";
     private static final String LOCALHOST = "localhost:9092";

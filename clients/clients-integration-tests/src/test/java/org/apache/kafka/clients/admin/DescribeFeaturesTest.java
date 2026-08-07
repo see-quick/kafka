@@ -31,6 +31,8 @@ import org.apache.kafka.server.common.ShareVersion;
 import org.apache.kafka.server.common.StreamsVersion;
 import org.apache.kafka.server.common.TransactionVersion;
 
+import org.junit.jupiter.api.Tag;
+
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
@@ -38,8 +40,6 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import org.junit.jupiter.api.Tag;
 @Tag("integration")
 public class DescribeFeaturesTest {
 

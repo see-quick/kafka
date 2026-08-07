@@ -19,14 +19,11 @@ package org.apache.kafka.systemtests.sanity;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.test.ClusterInstance;
-import org.apache.kafka.common.test.api.ClusterTest;
-import org.apache.kafka.common.test.api.ClusterTestDefaults;
-import org.apache.kafka.common.test.api.ClusterTests;
-import org.apache.kafka.common.test.api.ExecutionMode;
+import org.apache.kafka.common.test.api.ClusterSystemTest;
+import org.apache.kafka.common.test.api.ClusterSystemTests;
 import org.apache.kafka.common.test.api.Type;
 import org.apache.kafka.systemtests.utils.ClientUtils;
 
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Timeout;
 
 import java.util.List;
@@ -38,16 +35,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * Verifies that messages produced before and after a rolling restart
  * are all consumable.
  */
-@Tag("system")
-@ClusterTestDefaults(executionModes = {ExecutionMode.CONTAINER})
 public class BounceST {
 
     private static final int NUM_MESSAGES = 1000;
 
     @Timeout(300)
-    @ClusterTests({
-        @ClusterTest(brokers = 1, controllers = 1, types = {Type.KRAFT, Type.CO_KRAFT}),
-        @ClusterTest(brokers = 3, controllers = 3, types = {Type.KRAFT, Type.CO_KRAFT})
+    @ClusterSystemTests({
+        @ClusterSystemTest(brokers = 1, controllers = 1, types = {Type.KRAFT, Type.CO_KRAFT}),
+        @ClusterSystemTest(brokers = 3, controllers = 3, types = {Type.KRAFT, Type.CO_KRAFT})
     })
     void testBounce(ClusterInstance cluster) throws InterruptedException {
         String topicName = "bounce-test-topic";

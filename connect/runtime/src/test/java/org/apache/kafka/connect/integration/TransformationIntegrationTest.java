@@ -26,7 +26,6 @@ import org.apache.kafka.connect.util.clusters.EmbeddedConnectCluster;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -52,7 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 /**
  * An integration test for connectors with transformations
  */
-@Tag("integration")
+
 public class TransformationIntegrationTest {
 
     private static final int NUM_RECORDS_PRODUCED = 2000;

@@ -36,7 +36,6 @@ import org.apache.kafka.test.NoRetryException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
@@ -76,7 +75,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Integration tests for Kafka Connect's connector offset management REST APIs
  */
-@Tag("integration")
+
 public class OffsetsApiIntegrationTest {
 
     private static final Logger log = LoggerFactory.getLogger(OffsetsApiIntegrationTest.class);

@@ -163,6 +163,16 @@ class ContainerClusterInstance implements ClusterInstance {
     }
 
     @Override
+    public void restartBroker(int brokerId, Map<String, Object> propOverrides) {
+        throw new UnsupportedOperationException("Not yet implemented for container-based clusters");
+    }
+
+    @Override
+    public void restartBrokersWithSwappedClientListenerPorts(int brokerId1, int brokerId2) {
+        throw new UnsupportedOperationException("Not yet implemented for container-based clusters");
+    }
+
+    @Override
     public void waitForReadyBrokers() throws InterruptedException {
         try (Admin admin = admin()) {
             RaftClusterInvocationContext.waitForCondition(
@@ -218,6 +228,15 @@ class ContainerClusterInstance implements ClusterInstance {
     public List<Integer> brokerBoundPorts() {
         // TODO: implement using container mapped ports
         throw new UnsupportedOperationException("Not yet implemented for container-based clusters");
+    }
+
+    @Override
+    public Map<String, Object> setClientSslConfig(Map<String, Object> configs) {
+        if (clusterConfig.brokerSecurityProtocol() == SecurityProtocol.PLAINTEXT) {
+            return configs;
+        }
+        throw new UnsupportedOperationException(
+            "SSL client configuration is not yet implemented for container-based clusters");
     }
 
     @Override

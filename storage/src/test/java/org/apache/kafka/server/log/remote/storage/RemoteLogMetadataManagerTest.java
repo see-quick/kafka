@@ -40,10 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import org.junit.jupiter.api.Tag;
 @ClusterTestDefaults(brokers = 3)
-@Tag("integration")
 public class RemoteLogMetadataManagerTest {
     private final ClusterInstance clusterInstance;
     private static final TopicIdPartition TP0 = new TopicIdPartition(Uuid.randomUuid(), new TopicPartition("foo", 0));

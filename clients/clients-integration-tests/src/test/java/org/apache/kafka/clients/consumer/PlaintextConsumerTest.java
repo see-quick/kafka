@@ -113,8 +113,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-
-import org.junit.jupiter.api.Tag;
 @ClusterTestDefaults(
     types = {Type.KRAFT},
     brokers = BROKER_COUNT,
@@ -125,7 +123,7 @@ import org.junit.jupiter.api.Tag;
         @ClusterConfigProperty(key = GROUP_INITIAL_REBALANCE_DELAY_MS_CONFIG, value = "10"),
     }
 )
-@Tag("integration")
+
 public class PlaintextConsumerTest {
 
     private final ClusterInstance cluster;

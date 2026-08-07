@@ -25,6 +25,8 @@ import org.apache.kafka.common.test.api.ClusterTest;
 import org.apache.kafka.common.test.api.ClusterTestDefaults;
 import org.apache.kafka.common.test.api.Type;
 
+import org.junit.jupiter.api.Tag;
+
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -37,8 +39,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import org.junit.jupiter.api.Tag;
 @ClusterTestDefaults(types = {Type.KRAFT}, brokers = 4)
 @Tag("integration")
 public class AddPartitionsTest {

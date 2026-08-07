@@ -48,7 +48,6 @@ import org.apache.http.impl.client.HttpClients;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -81,7 +80,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.STRICT_STUBS)
 @SuppressWarnings("unchecked")
-@Tag("integration")
+
 public class RestForwardingIntegrationTest {
 
     private Map<String, Object> sslConfig;

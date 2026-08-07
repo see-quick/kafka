@@ -22,7 +22,6 @@ import org.apache.kafka.connect.util.clusters.EmbeddedConnectCluster;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * A simple integration test to ensure that internal request validation becomes enabled with the
  * "sessioned" protocol.
  */
-@Tag("integration")
+
 public class SessionedProtocolIntegrationTest {
 
     private static final Logger log = LoggerFactory.getLogger(SessionedProtocolIntegrationTest.class);

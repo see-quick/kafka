@@ -29,11 +29,10 @@ import org.apache.kafka.server.IntegrationTestUtils
 import org.apache.kafka.server.common.{EligibleLeaderReplicasVersion, GroupVersion, MetadataVersion, ShareVersion, StreamsVersion, TransactionVersion}
 import org.apache.kafka.test.TestUtils
 import org.junit.jupiter.api.Assertions._
-import org.junit.jupiter.api.Tag
 
 import scala.jdk.CollectionConverters._
 
-@Tag("integration")
+
 abstract class AbstractApiVersionsRequestTest(cluster: ClusterInstance) {
 
   def sendUnsupportedApiVersionRequest(request: ApiVersionsRequest): ApiVersionsResponse = {

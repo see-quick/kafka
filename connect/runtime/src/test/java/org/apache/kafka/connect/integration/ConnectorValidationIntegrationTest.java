@@ -31,7 +31,6 @@ import org.apache.kafka.connect.util.clusters.EmbeddedConnectCluster;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -57,7 +56,7 @@ import static org.apache.kafka.connect.runtime.SourceConnectorConfig.TOPIC_CREAT
 /**
  * Integration test for preflight connector config validation
  */
-@Tag("integration")
+
 public class ConnectorValidationIntegrationTest {
 
     private static final String WORKER_GROUP_ID = "connect-worker-group-id";

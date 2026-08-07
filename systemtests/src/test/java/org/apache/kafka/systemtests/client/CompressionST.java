@@ -19,14 +19,11 @@ package org.apache.kafka.systemtests.client;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.test.ClusterInstance;
-import org.apache.kafka.common.test.api.ClusterTest;
-import org.apache.kafka.common.test.api.ClusterTestDefaults;
-import org.apache.kafka.common.test.api.ClusterTests;
-import org.apache.kafka.common.test.api.ExecutionMode;
+import org.apache.kafka.common.test.api.ClusterSystemTest;
+import org.apache.kafka.common.test.api.ClusterSystemTests;
 import org.apache.kafka.common.test.api.Type;
 import org.apache.kafka.systemtests.utils.ClientUtils;
 
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
@@ -46,20 +43,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *       to the same topic, mirroring the Ducktape CompressionTest behavior</li>
  * </ul>
  */
-@Tag("system")
-@ClusterTestDefaults(executionModes = {ExecutionMode.CONTAINER})
 public class CompressionST {
 
     private static final String[] COMPRESSION_TYPES = {"snappy", "gzip", "lz4", "zstd", "none"};
     private static final int NUM_MESSAGES = 1000;
     private static final int NUM_PARTITIONS = 10;
 
-    @ClusterTests({
-        @ClusterTest(types = {Type.CO_KRAFT, Type.KRAFT}, tags = {"compression=snappy"}),
-        @ClusterTest(types = {Type.CO_KRAFT, Type.KRAFT}, tags = {"compression=gzip"}),
-        @ClusterTest(types = {Type.CO_KRAFT, Type.KRAFT}, tags = {"compression=lz4"}),
-        @ClusterTest(types = {Type.CO_KRAFT, Type.KRAFT}, tags = {"compression=zstd"}),
-        @ClusterTest(types = {Type.CO_KRAFT, Type.KRAFT}, tags = {"compression=none"})
+    @ClusterSystemTests({
+        @ClusterSystemTest(types = {Type.CO_KRAFT, Type.KRAFT}, tags = {"compression=snappy"}),
+        @ClusterSystemTest(types = {Type.CO_KRAFT, Type.KRAFT}, tags = {"compression=gzip"}),
+        @ClusterSystemTest(types = {Type.CO_KRAFT, Type.KRAFT}, tags = {"compression=lz4"}),
+        @ClusterSystemTest(types = {Type.CO_KRAFT, Type.KRAFT}, tags = {"compression=zstd"}),
+        @ClusterSystemTest(types = {Type.CO_KRAFT, Type.KRAFT}, tags = {"compression=none"})
     })
     void testCompressedTopic(ClusterInstance cluster) throws InterruptedException {
         String compressionType = cluster.config().tags().stream()
@@ -80,7 +75,7 @@ public class CompressionST {
     }
 
     @Timeout(120)
-    @ClusterTest(types = {Type.KRAFT}, controllers = 5, brokers = 5)
+    @ClusterSystemTest(types = {Type.KRAFT}, controllers = 5, brokers = 5)
     void testAllCompressionsConcurrently(ClusterInstance cluster) throws Exception {
         String topicName = "compression-concurrent-test";
         cluster.createTopic(topicName, NUM_PARTITIONS, (short) 1);

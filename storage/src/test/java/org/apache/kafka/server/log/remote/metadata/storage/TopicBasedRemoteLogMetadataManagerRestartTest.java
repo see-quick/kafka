@@ -35,8 +35,6 @@ import java.util.Set;
 import static org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManagerConfig.LOG_DIR;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.jupiter.api.Tag;
-@Tag("integration")
 public class TopicBasedRemoteLogMetadataManagerRestartTest {
 
     private final Time time = Time.SYSTEM;

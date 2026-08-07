@@ -48,14 +48,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
-import org.junit.jupiter.api.Tag;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * This test simulates a broker registering with the KRaft quorum under different configurations.
  */
-@Tag("integration")
+
 class BrokerRegistrationRequestTest {
     private final ClusterInstance clusterInstance;
     public BrokerRegistrationRequestTest(ClusterInstance clusterInstance) {

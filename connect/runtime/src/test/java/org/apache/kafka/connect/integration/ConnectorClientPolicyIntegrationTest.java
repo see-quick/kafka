@@ -27,7 +27,6 @@ import org.apache.kafka.connect.storage.StringConverter;
 import org.apache.kafka.connect.util.clusters.EmbeddedConnectCluster;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -43,7 +42,7 @@ import static org.apache.kafka.connect.runtime.WorkerConfig.OFFSET_COMMIT_INTERV
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
-@Tag("integration")
+
 public class ConnectorClientPolicyIntegrationTest {
 
     private static final int NUM_TASKS = 1;

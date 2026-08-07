@@ -40,7 +40,7 @@ import org.apache.kafka.test.MockSerializer;
 import org.apache.kafka.test.TestUtils;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,7 +67,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
     @ClusterConfigProperty(key = MetricConfigs.METRIC_REPORTER_CLASSES_CONFIG, value = "org.apache.kafka.api.EndToEndClusterIdTest$MockCommonMetricsReporter"),
     @ClusterConfigProperty(key = "offsets.topic.replication.factor", value = "1"),
 })
-@Tag("integration")
+
 public class EndToEndClusterIdTest {
 
     private static final String TOPIC = "e2etopic";

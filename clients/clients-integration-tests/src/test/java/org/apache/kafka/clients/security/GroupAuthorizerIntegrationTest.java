@@ -71,8 +71,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.junit.jupiter.api.Tag;
-
 @ClusterTestDefaults(serverProperties = {
     @ClusterConfigProperty(key = StandardAuthorizer.SUPER_USERS_CONFIG, value = "Group:broker"),
     @ClusterConfigProperty(key = GroupCoordinatorConfig.OFFSETS_TOPIC_PARTITIONS_CONFIG, value = "1"),
@@ -80,7 +78,7 @@ import org.junit.jupiter.api.Tag;
     @ClusterConfigProperty(key = ServerConfigs.AUTHORIZER_CLASS_NAME_CONFIG, value = "org.apache.kafka.metadata.authorizer.StandardAuthorizer"),
     @ClusterConfigProperty(key = BrokerSecurityConfigs.PRINCIPAL_BUILDER_CLASS_CONFIG, value = "org.apache.kafka.clients.security.GroupAuthorizerIntegrationTest$GroupPrincipalBuilder"),
 })
-@Tag("integration")
+
 public class GroupAuthorizerIntegrationTest {
     private static final KafkaPrincipal BROKER_PRINCIPAL = new KafkaPrincipal("Group", "broker");
     private static final KafkaPrincipal CLIENT_PRINCIPAL = new KafkaPrincipal("Group", "client");

@@ -93,7 +93,7 @@ public class RaftClusterInvocationContext implements TestTemplateInvocationConte
                                         final long maxWaitMs) throws InterruptedException {
         long endTime = System.currentTimeMillis() + maxWaitMs;
         long backoffMs = 500;
-        final long MAX_BACKOFF = 5_000;
+        final long maxBackoff = 5_000;
         int failures = 0;
 
         while (System.currentTimeMillis() < endTime) {
@@ -113,7 +113,7 @@ public class RaftClusterInvocationContext implements TestTemplateInvocationConte
             if (remainingMs > 0) {
                 long sleepMs = Math.min(backoffMs, remainingMs);
                 TimeUnit.MILLISECONDS.sleep(sleepMs);
-                backoffMs = Math.min(backoffMs * 2, MAX_BACKOFF);
+                backoffMs = Math.min(backoffMs * 2, maxBackoff);
             }
         }
         throw new AssertionError("Condition not met: " + conditionDetails + " (failed " + failures + " times)");

@@ -31,7 +31,7 @@ import org.apache.kafka.test.MockConsumerInterceptor;
 import org.apache.kafka.test.TestUtils;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
+
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
@@ -68,7 +68,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         @ClusterConfigProperty(key = GROUP_MIN_SESSION_TIMEOUT_MS_CONFIG, value = "100"),
     }
 )
-@Tag("integration")
+
 public class PlaintextConsumerCommitTest {
 
     public static final int BROKER_COUNT = 3;

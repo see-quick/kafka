@@ -39,7 +39,7 @@ import org.apache.kafka.common.test.api.Type;
 import org.apache.kafka.coordinator.group.GroupCoordinatorConfig;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Tag;
+
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -66,7 +66,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
         @ClusterConfigProperty(key = CONSUMER_GROUP_MIN_HEARTBEAT_INTERVAL_MS_CONFIG, value = "500"),
     }
 )
-@Tag("integration")
+
 public class DeleteOffsetsConsumerGroupCommandIntegrationTest {
     public static final String TOPIC_PREFIX = "foo.";
     public static final String GROUP_PREFIX = "test.group.";

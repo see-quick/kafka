@@ -21,6 +21,8 @@ import org.apache.kafka.common.test.api.AutoStart;
 import org.apache.kafka.common.test.api.ClusterConfig;
 import org.apache.kafka.common.test.api.ClusterConfigProperty;
 import org.apache.kafka.common.test.api.ClusterFeature;
+import org.apache.kafka.common.test.api.ClusterSystemTest;
+import org.apache.kafka.common.test.api.ClusterSystemTests;
 import org.apache.kafka.common.test.api.ClusterTemplate;
 import org.apache.kafka.common.test.api.ClusterTest;
 import org.apache.kafka.common.test.api.ClusterTestDefaults;
@@ -141,7 +143,9 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
         Method method = context.getRequiredTestMethod();
         return method.getDeclaredAnnotation(ClusterTemplate.class) != null ||
             method.getDeclaredAnnotation(ClusterTest.class) != null ||
-            method.getDeclaredAnnotation(ClusterTests.class) != null;
+            method.getDeclaredAnnotation(ClusterTests.class) != null ||
+            method.getDeclaredAnnotation(ClusterSystemTest.class) != null ||
+            method.getDeclaredAnnotation(ClusterSystemTests.class) != null;
     }
 
     @Override
@@ -152,19 +156,51 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
         // Process the @ClusterTemplate annotation
         ClusterTemplate clusterTemplateAnnot = context.getRequiredTestMethod().getDeclaredAnnotation(ClusterTemplate.class);
         if (clusterTemplateAnnot != null) {
-            generatedContexts.addAll(processClusterTemplate(context, clusterTemplateAnnot));
+            generatedContexts.addAll(processClusterTemplate(context, clusterTemplateAnnot.value()));
         }
 
         // Process single @ClusterTest annotation
         ClusterTest clusterTestAnnot = context.getRequiredTestMethod().getDeclaredAnnotation(ClusterTest.class);
         if (clusterTestAnnot != null) {
-            generatedContexts.addAll(processClusterTests(context, new ClusterTest[]{clusterTestAnnot}, defaults));
+            String[] images = resolveContainerImages(context, clusterTestAnnot.containerImages(), clusterTestAnnot.containerImageSource());
+            generatedContexts.addAll(processClusterTestConfigs(context,
+                new ClusterTestConfig[]{ClusterTestConfig.from(clusterTestAnnot)},
+                new String[][]{images}, defaults));
         }
 
-        // Process multiple @ClusterTest annotation within @ClusterTests
+        // Process multiple @ClusterTest annotations within @ClusterTests
         ClusterTests clusterTestsAnnot = context.getRequiredTestMethod().getDeclaredAnnotation(ClusterTests.class);
         if (clusterTestsAnnot != null) {
-            generatedContexts.addAll(processClusterTests(context, clusterTestsAnnot.value(), defaults));
+            ClusterTest[] annots = clusterTestsAnnot.value();
+            ClusterTestConfig[] configs = Arrays.stream(annots)
+                .map(ClusterTestConfig::from)
+                .toArray(ClusterTestConfig[]::new);
+            String[][] images = Arrays.stream(annots)
+                .map(a -> resolveContainerImages(context, a.containerImages(), a.containerImageSource()))
+                .toArray(String[][]::new);
+            generatedContexts.addAll(processClusterTestConfigs(context, configs, images, defaults));
+        }
+
+        // Process single @ClusterSystemTest annotation
+        ClusterSystemTest clusterSystemTestAnnot = context.getRequiredTestMethod().getDeclaredAnnotation(ClusterSystemTest.class);
+        if (clusterSystemTestAnnot != null) {
+            String[] images = resolveContainerImages(context, clusterSystemTestAnnot.containerImages(), clusterSystemTestAnnot.containerImageSource());
+            generatedContexts.addAll(processClusterTestConfigs(context,
+                new ClusterTestConfig[]{ClusterTestConfig.from(clusterSystemTestAnnot)},
+                new String[][]{images}, defaults));
+        }
+
+        // Process multiple @ClusterSystemTest annotations within @ClusterSystemTests
+        ClusterSystemTests clusterSystemTestsAnnot = context.getRequiredTestMethod().getDeclaredAnnotation(ClusterSystemTests.class);
+        if (clusterSystemTestsAnnot != null) {
+            ClusterSystemTest[] annots = clusterSystemTestsAnnot.value();
+            ClusterTestConfig[] configs = Arrays.stream(annots)
+                .map(ClusterTestConfig::from)
+                .toArray(ClusterTestConfig[]::new);
+            String[][] images = Arrays.stream(annots)
+                .map(a -> resolveContainerImages(context, a.containerImages(), a.containerImageSource()))
+                .toArray(String[][]::new);
+            generatedContexts.addAll(processClusterTestConfigs(context, configs, images, defaults));
         }
 
         return generatedContexts.stream();
@@ -223,15 +259,15 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
         };
     }
 
-    List<TestTemplateInvocationContext> processClusterTemplate(ExtensionContext context, ClusterTemplate annot) {
-        if (annot.value().trim().isEmpty()) {
+    List<TestTemplateInvocationContext> processClusterTemplate(ExtensionContext context, String generatorMethodName) {
+        if (generatorMethodName.trim().isEmpty()) {
             throw new IllegalStateException("ClusterTemplate value can't be empty string.");
         }
 
         String baseDisplayName = context.getRequiredTestMethod().getName();
         int repeatCount = getTestRepeatCount();
         List<TestTemplateInvocationContext> contexts = IntStream.range(0, repeatCount)
-            .mapToObj(__ -> generateClusterConfiguration(context, annot.value()).stream())
+            .mapToObj(__ -> generateClusterConfiguration(context, generatorMethodName).stream())
             .flatMap(Function.identity())
             .flatMap(config -> config.clusterTypes().stream()
                 .flatMap(type -> config.executionModes().stream()
@@ -255,17 +291,19 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
         return (List<ClusterConfig>) ReflectionUtils.invokeMethod(method, testInstance);
     }
 
-    private List<TestTemplateInvocationContext> processClusterTests(
+    private List<TestTemplateInvocationContext> processClusterTestConfigs(
         ExtensionContext context,
-        ClusterTest[] clusterTests,
+        ClusterTestConfig[] clusterTestConfigs,
+        String[][] containerImagesPerConfig,
         ClusterTestDefaults defaults
     ) {
         int repeatCount = getTestRepeatCount();
-        List<TestTemplateInvocationContext> ret = IntStream.range(0, repeatCount)
-            .mapToObj(__ -> Arrays.stream(clusterTests))
-            .flatMap(Function.identity())
-            .flatMap(clusterTest -> processClusterTestInternal(context, clusterTest, defaults).stream())
-            .collect(Collectors.toList());
+        List<TestTemplateInvocationContext> ret = new ArrayList<>();
+        for (int r = 0; r < repeatCount; r++) {
+            for (int i = 0; i < clusterTestConfigs.length; i++) {
+                ret.addAll(processClusterTestConfigInternal(context, clusterTestConfigs[i], containerImagesPerConfig[i], defaults));
+            }
+        }
 
         if (ret.isEmpty()) {
             throw new IllegalStateException("processClusterTests method should provide at least one config");
@@ -274,14 +312,14 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
         return ret;
     }
 
-    private List<TestTemplateInvocationContext> processClusterTestInternal(
+    private List<TestTemplateInvocationContext> processClusterTestConfigInternal(
         ExtensionContext context,
-        ClusterTest clusterTest,
+        ClusterTestConfig clusterTest,
+        String[] containerImages,
         ClusterTestDefaults defaults
     ) {
         Type[] types = clusterTest.types().length == 0 ? defaults.types() : clusterTest.types();
-        ExecutionMode[] executionModes = clusterTest.executionModes().length == 0
-            ? defaults.executionModes() : clusterTest.executionModes();
+        ExecutionMode executionMode = clusterTest.executionMode();
 
         Map<String, String> serverProperties = Stream.concat(Arrays.stream(defaults.serverProperties()), Arrays.stream(clusterTest.serverProperties()))
             .filter(e -> e.id() == -1)
@@ -295,11 +333,9 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
         Map<Feature, Short> features = Arrays.stream(clusterTest.features())
             .collect(Collectors.toMap(ClusterFeature::feature, ClusterFeature::version));
 
-        String[] containerImages = resolveContainerImages(context, clusterTest);
-
         ClusterConfig.Builder baseBuilder = ClusterConfig.builder()
             .setTypes(Set.of(types))
-            .setExecutionModes(Set.of(executionModes))
+            .setExecutionModes(Set.of(executionMode))
             .setBrokers(clusterTest.brokers() == 0 ? defaults.brokers() : clusterTest.brokers())
             .setControllers(clusterTest.controllers() == 0 ? defaults.controllers() : clusterTest.controllers())
             .setDisksPerBroker(clusterTest.disksPerBroker() == 0 ? defaults.disksPerBroker() : clusterTest.disksPerBroker())
@@ -315,8 +351,6 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
             .setFeatures(features)
             .setStandalone(clusterTest.standalone());
 
-        // When no container images are specified, produce a single config without a container image.
-        // Otherwise, fan out: one config per container image (Cartesian product with types x executionModes).
         Stream<ClusterConfig> configs;
         if (containerImages.length == 0) {
             configs = Stream.of(baseBuilder.build());
@@ -334,11 +368,9 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
     }
 
     @SuppressWarnings("unchecked")
-    private String[] resolveContainerImages(ExtensionContext context, ClusterTest clusterTest) {
-        String[] literal = clusterTest.containerImages();
-        String source = clusterTest.containerImageSource();
+    private String[] resolveContainerImages(ExtensionContext context, String[] literalImages, String source) {
         if (source.isEmpty()) {
-            return literal;
+            return literalImages;
         }
 
         Object testInstance = context.getTestInstance().orElse(null);
@@ -355,11 +387,10 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
                 "containerImageSource method '" + source + "' must return String[] or List<String>");
         }
 
-        // Merge literal containerImages with the source result
-        if (literal.length == 0) {
+        if (literalImages.length == 0) {
             return fromSource;
         }
-        return Stream.concat(Arrays.stream(literal), Arrays.stream(fromSource))
+        return Stream.concat(Arrays.stream(literalImages), Arrays.stream(fromSource))
             .toArray(String[]::new);
     }
 

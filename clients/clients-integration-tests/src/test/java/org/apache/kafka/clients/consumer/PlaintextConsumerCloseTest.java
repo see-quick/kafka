@@ -24,6 +24,8 @@ import org.apache.kafka.common.test.api.ClusterTest;
 import org.apache.kafka.common.test.api.ClusterTestDefaults;
 import org.apache.kafka.common.test.api.Type;
 
+import org.junit.jupiter.api.Tag;
+
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Map;
@@ -44,8 +46,6 @@ import static org.apache.kafka.coordinator.group.GroupCoordinatorConfig.GROUP_MA
 import static org.apache.kafka.coordinator.group.GroupCoordinatorConfig.GROUP_MIN_SESSION_TIMEOUT_MS_CONFIG;
 import static org.apache.kafka.coordinator.group.GroupCoordinatorConfig.OFFSETS_TOPIC_PARTITIONS_CONFIG;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import org.junit.jupiter.api.Tag;
 @ClusterTestDefaults(
     types = {Type.KRAFT},
     brokers = BROKER_COUNT,

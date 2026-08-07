@@ -44,7 +44,6 @@ import org.apache.kafka.test.TestCondition;
 import org.apache.kafka.test.TestUtils;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestInfo;
 
 import java.util.ArrayList;
@@ -66,7 +65,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
-@Tag("integration")
 @ClusterTestDefaults(
     types = Type.KRAFT,
     brokers = 2,

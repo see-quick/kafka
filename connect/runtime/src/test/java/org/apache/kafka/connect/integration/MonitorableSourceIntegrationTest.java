@@ -23,7 +23,6 @@ import org.apache.kafka.connect.util.clusters.EmbeddedConnectStandalone;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -44,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Integration test for a source connector defining metrics via the PluginMetrics API
  */
-@Tag("integration")
+
 @Timeout(value = 600)
 public class MonitorableSourceIntegrationTest {
 

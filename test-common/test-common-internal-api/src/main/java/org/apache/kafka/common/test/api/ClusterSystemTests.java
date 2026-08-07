@@ -14,22 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.kafka.common.test.api;
 
-package org.apache.kafka.server.config;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.api.Timeout;
 
-import org.apache.kafka.common.config.TopicConfig;
-import org.apache.kafka.common.test.ClusterInstance;
-import org.apache.kafka.common.test.api.ClusterConfigProperty;
-import org.apache.kafka.common.test.api.ClusterTest;
+import java.lang.annotation.Documented;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-public class MinInSyncReplicasConfigTest {
-
-    @ClusterTest(serverProperties = {
-        @ClusterConfigProperty(key = TopicConfig.MIN_IN_SYNC_REPLICAS_CONFIG, value = "5")
-    })
-    public void testDefaultKafkaConfig(ClusterInstance cluster) {
-        assertEquals(5, cluster.brokers().get(0).logManager().initialDefaultConfig().minInSyncReplicas);
-    }
+@Documented
+@Target({METHOD})
+@Retention(RUNTIME)
+@TestTemplate
+@Timeout(60)
+@Tag("system")
+public @interface ClusterSystemTests {
+    ClusterSystemTest[] value();
 }

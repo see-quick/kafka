@@ -40,8 +40,6 @@ import static org.apache.kafka.server.log.remote.storage.RemoteLogManagerConfig.
 import static org.apache.kafka.server.log.remote.storage.RemoteLogManagerConfig.REMOTE_STORAGE_MANAGER_CLASS_NAME_PROP;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.jupiter.api.Tag;
-@Tag("integration")
 public class MonitorablePluginsIntegrationTest {
     private static int controllerId(Type type) {
         return type == Type.KRAFT ? 3000 : 0;

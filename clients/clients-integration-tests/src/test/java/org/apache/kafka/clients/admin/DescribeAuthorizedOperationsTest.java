@@ -54,8 +54,6 @@ import static org.apache.kafka.common.acl.AclPermissionType.ALLOW;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import org.junit.jupiter.api.Tag;
-@Tag("integration")
 public class DescribeAuthorizedOperationsTest {
     private static final String GROUP1 = "group1";
     private static final String GROUP2 = "group2";

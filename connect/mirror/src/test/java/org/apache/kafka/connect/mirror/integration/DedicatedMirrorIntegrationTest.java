@@ -39,7 +39,6 @@ import org.apache.kafka.test.NoRetryException;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,7 +61,7 @@ import static org.apache.kafka.connect.mirror.MirrorMaker.CONNECTOR_CLASSES;
 import static org.apache.kafka.test.TestUtils.waitForCondition;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@Tag("integration")
+
 public class DedicatedMirrorIntegrationTest {
 
     private static final Logger log = LoggerFactory.getLogger(DedicatedMirrorIntegrationTest.class);

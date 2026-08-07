@@ -20,14 +20,11 @@ package org.apache.kafka.systemtests.sanity;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.test.ClusterInstance;
-import org.apache.kafka.common.test.api.ClusterTest;
-import org.apache.kafka.common.test.api.ClusterTestDefaults;
-import org.apache.kafka.common.test.api.ExecutionMode;
+import org.apache.kafka.common.test.api.ClusterSystemTest;
 import org.apache.kafka.common.test.api.Type;
 import org.apache.kafka.systemtests.KafkaVersions;
 import org.apache.kafka.systemtests.utils.ClientUtils;
 
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Timeout;
 
 import java.util.List;
@@ -39,8 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  * Sanity test that verifies basic produce/consume works against each released Kafka version.
  * Uses the current client against broker containers of older versions.
  */
-@Tag("system")
-@ClusterTestDefaults(executionModes = {ExecutionMode.CONTAINER})
 public class CrossVersionST {
 
     private static final int NUM_MESSAGES = 100;
@@ -51,7 +46,7 @@ public class CrossVersionST {
     }
 
     @Timeout(120)
-    @ClusterTest(
+    @ClusterSystemTest(
         types = {Type.KRAFT, Type.CO_KRAFT},
         containerImageSource = "crossVersionImages"
     )
