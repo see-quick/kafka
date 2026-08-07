@@ -57,7 +57,6 @@ import static org.apache.kafka.coordinator.group.GroupCoordinatorConfig.OFFSETS_
         @ClusterConfigProperty(key = SASL_MECHANISM_INTER_BROKER_PROTOCOL_CONFIG, value = MECHANISMS),
     }
 )
-
 public class SaslPlainPlaintextConsumerTest {
 
     private final ClusterInstance cluster;

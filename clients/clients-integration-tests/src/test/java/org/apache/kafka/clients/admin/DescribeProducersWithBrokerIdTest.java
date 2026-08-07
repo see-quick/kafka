@@ -36,7 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 
-@Tag("integration")
 @ClusterTestDefaults(
     brokers = 3
 )

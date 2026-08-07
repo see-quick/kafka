@@ -70,7 +70,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @ClusterTestDefaults(
         disksPerBroker = 2
 )
-@Tag("integration")
 public class CordonedLogDirsIntegrationTest {
 
     private static final String TOPIC1 = "topic1";

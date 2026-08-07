@@ -69,7 +69,6 @@ import static org.junit.jupiter.api.Assertions.fail;
         @ClusterConfigProperty(key = GROUP_INITIAL_REBALANCE_DELAY_MS_CONFIG, value = "10"),
     }
 )
-
 public class PlaintextConsumerSubscriptionTest {
 
     public static final int BROKER_COUNT = 3;

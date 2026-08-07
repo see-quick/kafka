@@ -39,8 +39,8 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
 @ClusterTestDefaults(types = {Type.KRAFT}, brokers = 4)
-@Tag("integration")
 public class AddPartitionsTest {
 
     @ClusterTest

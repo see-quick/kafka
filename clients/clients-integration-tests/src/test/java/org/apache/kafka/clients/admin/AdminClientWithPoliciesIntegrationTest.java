@@ -59,7 +59,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         @ClusterConfigProperty(key = ServerLogConfigs.ALTER_CONFIG_POLICY_CLASS_NAME_CONFIG, value = "org.apache.kafka.clients.admin.AdminClientWithPoliciesIntegrationTest$Policy"),
     }
 )
-
 public class AdminClientWithPoliciesIntegrationTest {
     private final ClusterInstance clusterInstance;
     private static List<AlterConfigPolicy.RequestMetadata> validations = new ArrayList<>();

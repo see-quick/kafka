@@ -68,7 +68,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         @ClusterConfigProperty(key = GROUP_MIN_SESSION_TIMEOUT_MS_CONFIG, value = "100"),
     }
 )
-
 public class PlaintextConsumerCommitTest {
 
     public static final int BROKER_COUNT = 3;

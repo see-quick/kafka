@@ -90,7 +90,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Timeout(120)
 @ClusterTestDefaults(types = {Type.KRAFT})
-
 public class BootstrapControllersIntegrationTest {
     private Map<String, Object> adminConfig(ClusterInstance clusterInstance, boolean usingBootstrapControllers) {
         return usingBootstrapControllers ?

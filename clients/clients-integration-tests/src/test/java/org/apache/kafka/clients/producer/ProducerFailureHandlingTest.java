@@ -73,7 +73,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         @ClusterConfigProperty(key = OFFSETS_TOPIC_PARTITIONS_CONFIG, value = "1"),
     }
 )
-
 public class ProducerFailureHandlingTest {
 
     private final int producerBufferSize = 30000;

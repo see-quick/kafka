@@ -58,7 +58,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         @ClusterConfigProperty(key = "log.retention.ms", value = "-1"),
     }
 )
-
 public class ListOffsetsIntegrationTest {
     private static final String TOPIC = "topic";
     private static final String CUSTOM_CONFIG_TOPIC = "custom_topic";

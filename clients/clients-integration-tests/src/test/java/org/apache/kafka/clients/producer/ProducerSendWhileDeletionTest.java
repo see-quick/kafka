@@ -60,6 +60,7 @@ import static org.apache.kafka.server.config.ReplicationConfigs.DEFAULT_REPLICAT
 import static org.apache.kafka.server.config.ServerLogConfigs.NUM_PARTITIONS_CONFIG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+
 @ClusterTestDefaults(
     types = {Type.KRAFT},
     brokers = BROKER_COUNT,
@@ -71,7 +72,6 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
         @ClusterConfigProperty(key = ServerLogConfigs.LOG_INITIAL_TASK_DELAY_MS_CONFIG, value = "100")
     }
 )
-
 public class ProducerSendWhileDeletionTest {
 
     public static final int BROKER_COUNT = 2;

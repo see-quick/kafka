@@ -61,6 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
 @ClusterTestDefaults(
     brokers = 3,
     serverProperties = {
@@ -71,8 +72,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         @ClusterConfigProperty(id = 2, key = "broker.rack", value = "rack/2")
     }
 )
-
-@Tag("integration")
 public class MetadataRequestTest {
 
     private final ClusterInstance clusterInstance;

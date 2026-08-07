@@ -46,6 +46,7 @@ import static org.apache.kafka.coordinator.group.GroupCoordinatorConfig.GROUP_MA
 import static org.apache.kafka.coordinator.group.GroupCoordinatorConfig.GROUP_MIN_SESSION_TIMEOUT_MS_CONFIG;
 import static org.apache.kafka.coordinator.group.GroupCoordinatorConfig.OFFSETS_TOPIC_PARTITIONS_CONFIG;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
 @ClusterTestDefaults(
     types = {Type.KRAFT},
     brokers = BROKER_COUNT,
@@ -56,7 +57,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         @ClusterConfigProperty(key = GROUP_INITIAL_REBALANCE_DELAY_MS_CONFIG, value = "10"),
     }
 )
-@Tag("integration")
 public class PlaintextConsumerCloseTest {
 
     private final ClusterInstance cluster;

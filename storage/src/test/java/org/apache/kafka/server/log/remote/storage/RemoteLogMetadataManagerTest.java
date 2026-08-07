@@ -40,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
 @ClusterTestDefaults(brokers = 3)
 public class RemoteLogMetadataManagerTest {
     private final ClusterInstance clusterInstance;

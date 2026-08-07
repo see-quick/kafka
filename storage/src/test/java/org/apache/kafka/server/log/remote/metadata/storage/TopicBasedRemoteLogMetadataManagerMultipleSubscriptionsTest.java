@@ -47,6 +47,7 @@ import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+
 @ClusterTestDefaults(brokers = 3)
 public class TopicBasedRemoteLogMetadataManagerMultipleSubscriptionsTest {
     private final ClusterInstance clusterInstance;
