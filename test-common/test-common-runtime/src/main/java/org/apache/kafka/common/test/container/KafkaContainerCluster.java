@@ -188,12 +188,12 @@ public class KafkaContainerCluster implements AutoCloseable {
 
             config.put(KafkaEnvVars.LISTENER_SECURITY_PROTOCOL_MAP,
                 Listener.EXTERNAL + ":" + nodeConfig.securityProtocol().name() +
-                "," + Listener.INTERNAL + ":PLAINTEXT" +
-                "," + Listener.CONTROLLER + ":PLAINTEXT");
+                "," + Listener.INTERNAL + ":" + Listener.PLAINTEXT +
+                "," + Listener.CONTROLLER + ":" + Listener.PLAINTEXT);
             config.put(KafkaEnvVars.INTER_BROKER_LISTENER_NAME, Listener.INTERNAL);
         } else {
             config.put(KafkaEnvVars.LISTENERS, Listener.CONTROLLER + "://0.0.0.0:" + CONTROLLER_PORT);
-            config.put(KafkaEnvVars.LISTENER_SECURITY_PROTOCOL_MAP, Listener.CONTROLLER + ":PLAINTEXT");
+            config.put(KafkaEnvVars.LISTENER_SECURITY_PROTOCOL_MAP, Listener.CONTROLLER + ":" + Listener.PLAINTEXT);
         }
 
         config.put(KafkaEnvVars.CONTROLLER_LISTENER_NAMES, Listener.CONTROLLER);

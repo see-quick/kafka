@@ -26,6 +26,7 @@ class Listener {
     static final String EXTERNAL = "EXTERNAL";
     static final String INTERNAL = "INTERNAL";
     static final String CONTROLLER = "CONTROLLER";
+    static final String PLAINTEXT = "PLAINTEXT";
 
     /**
      * Defines the role of a Kafka listener.
