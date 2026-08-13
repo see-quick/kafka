@@ -83,12 +83,12 @@ public class RaftClusterInvocationContext implements TestTemplateInvocationConte
      * without unnecessarily increasing test time (as the condition is checked frequently). The longer timeout is needed to
      * avoid transient failures due to slow or overloaded machines.
      */
-    static void waitForCondition(final java.util.function.Supplier<Boolean> testCondition,
+    public static void waitForCondition(final java.util.function.Supplier<Boolean> testCondition,
                                         final String conditionDetails) throws InterruptedException {
         waitForCondition(testCondition, conditionDetails, 15_000L);
     }
 
-    static void waitForCondition(final java.util.function.Supplier<Boolean> testCondition,
+    public static void waitForCondition(final java.util.function.Supplier<Boolean> testCondition,
                                         final String conditionDetails,
                                         final long maxWaitMs) throws InterruptedException {
         long endTime = System.currentTimeMillis() + maxWaitMs;

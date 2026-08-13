@@ -18,6 +18,7 @@
 package org.apache.kafka.common.test.junit;
 
 import org.apache.kafka.common.test.api.ClusterConfig;
+import org.apache.kafka.common.test.container.ContainerClusterInstance;
 
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback;

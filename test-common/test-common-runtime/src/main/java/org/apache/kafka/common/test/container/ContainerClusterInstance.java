@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.kafka.common.test.junit;
+package org.apache.kafka.common.test.container;
 
 import kafka.server.ControllerServer;
 import kafka.server.KafkaBroker;
@@ -28,10 +28,10 @@ import org.apache.kafka.common.acl.AclBindingFilter;
 import org.apache.kafka.common.network.ListenerName;
 import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.common.test.ClusterInstance;
-import org.apache.kafka.common.test.container.KafkaContainerCluster;
 import org.apache.kafka.common.test.api.ClusterConfig;
 import org.apache.kafka.common.test.api.ExecutionMode;
 import org.apache.kafka.common.test.api.Type;
+import org.apache.kafka.common.test.junit.RaftClusterInvocationContext;
 import org.apache.kafka.server.authorizer.Authorizer;
 import org.apache.kafka.server.fault.FaultHandlerException;
 
@@ -50,7 +50,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * server internals (e.g., {@link #brokers()}, {@link #controllers()}) throw
  * {@link UnsupportedOperationException}.
  */
-class ContainerClusterInstance implements ClusterInstance {
+public class ContainerClusterInstance implements ClusterInstance {
 
     private final ClusterConfig clusterConfig;
     private final KafkaContainerCluster cluster;
@@ -59,7 +59,7 @@ class ContainerClusterInstance implements ClusterInstance {
     private final ListenerName listenerName;
     private final boolean isCombined;
 
-    ContainerClusterInstance(ClusterConfig clusterConfig, boolean isCombined) {
+    public ContainerClusterInstance(ClusterConfig clusterConfig, boolean isCombined) {
         this.clusterConfig = clusterConfig;
         this.isCombined = isCombined;
         this.listenerName = clusterConfig.brokerListenerName();
@@ -124,7 +124,7 @@ class ContainerClusterInstance implements ClusterInstance {
         return cluster.clusterId();
     }
 
-    void setLogDir(Path logDir) {
+    public void setLogDir(Path logDir) {
         cluster.setLogDir(logDir);
     }
 
@@ -211,7 +211,7 @@ class ContainerClusterInstance implements ClusterInstance {
                     TopicDescription desc = admin.describeTopics(List.of(topic))
                         .topicNameValues().get(topic).get();
                     return desc.partitions().size() == partitions;
-                } catch (InterruptedException | java.util.concurrent.ExecutionException e) {
+                } catch (InterruptedException | ExecutionException e) {
                     return false;
                 }
             }, topic + " not created with " + partitions + " partitions after timeout");
@@ -220,13 +220,11 @@ class ContainerClusterInstance implements ClusterInstance {
 
     @Override
     public List<Integer> controllerBoundPorts() {
-        // TODO: implement using container mapped ports
         throw new UnsupportedOperationException("Not yet implemented for container-based clusters");
     }
 
     @Override
     public List<Integer> brokerBoundPorts() {
-        // TODO: implement using container mapped ports
         throw new UnsupportedOperationException("Not yet implemented for container-based clusters");
     }
 
@@ -241,29 +239,23 @@ class ContainerClusterInstance implements ClusterInstance {
 
     @Override
     public Set<GroupProtocol> supportedGroupProtocols() {
-        // TODO: implement using Admin.describeFeatures()
         throw new UnsupportedOperationException("Not yet implemented for container-based clusters");
     }
 
     @Override
     public void waitTopicDeletion(String topic) {
-        // TODO: implement using Admin.listTopics() polling
         throw new UnsupportedOperationException("Not yet implemented for container-based clusters");
     }
 
     @Override
     public void ensureConsistentMetadata() {
-        // TODO: implement using Admin client metadata queries
         throw new UnsupportedOperationException("Not yet implemented for container-based clusters");
     }
 
     @Override
     public void ensureConsistentMetadata(Collection<KafkaBroker> brokers, Collection<ControllerServer> controllers) {
-        // TODO: implement using Admin client metadata queries
         throw new UnsupportedOperationException("Not yet implemented for container-based clusters");
     }
-
-    // ---- TODO: I think so this is un-supported (i.e., requires in-process JVM access to server internals) ----
 
     @Override
     public Map<Integer, KafkaBroker> brokers() {
