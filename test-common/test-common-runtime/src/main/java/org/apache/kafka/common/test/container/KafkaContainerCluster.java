@@ -15,11 +15,10 @@
  * limitations under the License.
  */
 
-package org.apache.kafka.common.test;
+package org.apache.kafka.common.test.container;
 
 import org.apache.kafka.common.security.auth.SecurityProtocol;
-
-import com.github.dockerjava.api.command.InspectContainerResponse;
+import org.apache.kafka.common.test.JaasUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,12 +27,10 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.images.builder.Transferable;
 import org.testcontainers.lifecycle.Startables;
 import org.testcontainers.utility.DockerImageName;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -71,10 +68,13 @@ public class KafkaContainerCluster implements AutoCloseable {
 
     private static final String DEFAULT_IMAGE = "apache/kafka:latest";
     private static final String IMAGE_PROPERTY = "kafka.container.image";
-    private static final String STARTER_SCRIPT = "/tmp/start_kafka.sh";
-    private static final int KAFKA_PORT = 9092;
+    static final String STARTER_SCRIPT = "/tmp/start_kafka.sh";
+    static final int KAFKA_PORT = 9092;
     private static final int CONTROLLER_PORT = 9093;
-    private static final int INTERNAL_PORT = 9094;
+    static final int INTERNAL_PORT = 9094;
+    static final String CLUSTER_ID = "test-container-cluster-id-01";
+    private static final int MAX_DOCKER_RETRIES = 3;
+    private static final long DOCKER_RETRY_BACKOFF_MS = 2000;
 
     private final int numBrokers;
     private final int numControllers;
@@ -130,14 +130,13 @@ public class KafkaContainerCluster implements AutoCloseable {
             container
                 .withNetwork(network)
                 .withNetworkAliases("kafka-" + nodeId)
-                .withEnv(toEnvVars(config));
+                .withEnv(Collections.unmodifiableMap(config));
 
             if (processRoles.contains("broker") && processRoles.contains("controller")) {
                 container.withExposedPorts(KAFKA_PORT, CONTROLLER_PORT);
             } else if (processRoles.contains("broker")) {
                 container.withExposedPorts(KAFKA_PORT);
             } else {
-                // Controller-only node
                 container.withExposedPorts(CONTROLLER_PORT);
             }
 
@@ -160,7 +159,6 @@ public class KafkaContainerCluster implements AutoCloseable {
             if (isBroker) return "broker";
             return "controller";
         } else {
-            // Isolated: controllers first, then brokers
             if (nodeId < numControllers) return "controller";
             return "broker";
         }
@@ -181,9 +179,8 @@ public class KafkaContainerCluster implements AutoCloseable {
         config.put("KAFKA_NODE_ID", String.valueOf(nodeId));
         config.put("KAFKA_PROCESS_ROLES", processRoles);
         config.put("KAFKA_CONTROLLER_QUORUM_VOTERS", quorumVoters);
-        config.put("CLUSTER_ID", "test-container-cluster-id-01");
+        config.put("CLUSTER_ID", CLUSTER_ID);
 
-        // Listeners configuration
         if (processRoles.contains("broker")) {
             config.put("KAFKA_LISTENERS",
                 "EXTERNAL://0.0.0.0:" + KAFKA_PORT +
@@ -197,29 +194,20 @@ public class KafkaContainerCluster implements AutoCloseable {
                 "EXTERNAL:" + securityProtocol.name() + ",INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT");
             config.put("KAFKA_INTER_BROKER_LISTENER_NAME", "INTERNAL");
         } else {
-            // Controller-only node
             config.put("KAFKA_LISTENERS", "CONTROLLER://0.0.0.0:" + CONTROLLER_PORT);
             config.put("KAFKA_LISTENER_SECURITY_PROTOCOL_MAP", "CONTROLLER:PLAINTEXT");
         }
 
         config.put("KAFKA_CONTROLLER_LISTENER_NAMES", "CONTROLLER");
-
-        // Use the volume-backed data directory instead of the default /tmp/kafka-logs
         config.put("KAFKA_LOG_DIRS", "/var/lib/kafka/data");
-
-        // Default config
         config.put("KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR", String.valueOf(Math.min(numBrokers, 3)));
         config.put("KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS", "0");
         config.put("KAFKA_TRANSACTION_STATE_LOG_MIN_ISR", "1");
         config.put("KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR", String.valueOf(Math.min(numBrokers, 3)));
 
-        // SASL configuration (only for broker nodes with SASL protocols)
         if (processRoles.contains("broker") && isSaslProtocol()) {
             config.put("KAFKA_SASL_ENABLED_MECHANISMS", saslMechanism);
             if ("PLAIN".equals(saslMechanism)) {
-                // For PLAIN, configure the JAAS config inline via env var.
-                // The env var name encodes listener name + mechanism:
-                //   KAFKA_LISTENER_NAME_EXTERNAL_PLAIN_SASL_JAAS_CONFIG
                 String jaasConfig = "org.apache.kafka.common.security.plain.PlainLoginModule required "
                     + "username=\"" + JaasUtils.KAFKA_PLAIN_ADMIN + "\" "
                     + "password=\"" + JaasUtils.KAFKA_PLAIN_ADMIN_PASSWORD + "\" "
@@ -227,16 +215,12 @@ public class KafkaContainerCluster implements AutoCloseable {
                     + "user_" + JaasUtils.KAFKA_PLAIN_USER1 + "=\"" + JaasUtils.KAFKA_PLAIN_USER1_PASSWORD + "\";";
                 config.put("KAFKA_LISTENER_NAME_EXTERNAL_PLAIN_SASL_JAAS_CONFIG", jaasConfig);
             } else if (saslMechanism != null && saslMechanism.startsWith("SCRAM-")) {
-                // For SCRAM, the broker-side JAAS config just needs the login module.
-                // Users are stored in metadata and created via kafka-configs after startup.
-                // The double underscores in env var names represent hyphens in the mechanism name.
                 String envMechanism = saslMechanism.replace("-", "__");
                 String jaasConfig = "org.apache.kafka.common.security.scram.ScramLoginModule required;";
                 config.put("KAFKA_LISTENER_NAME_EXTERNAL_" + envMechanism + "_SASL_JAAS_CONFIG", jaasConfig);
             }
         }
 
-        // Apply user-provided server properties
         for (Map.Entry<String, String> entry : serverProperties.entrySet()) {
             config.put("KAFKA_" + entry.getKey().replace(".", "_").toUpperCase(Locale.ROOT), entry.getValue());
         }
@@ -247,10 +231,6 @@ public class KafkaContainerCluster implements AutoCloseable {
     private boolean isSaslProtocol() {
         return securityProtocol == SecurityProtocol.SASL_PLAINTEXT
             || securityProtocol == SecurityProtocol.SASL_SSL;
-    }
-
-    private Map<String, String> toEnvVars(Map<String, String> config) {
-        return Collections.unmodifiableMap(config);
     }
 
     /**
@@ -298,9 +278,6 @@ public class KafkaContainerCluster implements AutoCloseable {
 
         runningNodeIds.addAll(containers.keySet());
 
-        waitForBrokerConnectivity();
-
-        // For SCRAM mechanisms, create the test users via kafka-configs after the cluster is up
         if (isSaslProtocol() && saslMechanism != null && saslMechanism.startsWith("SCRAM-")) {
             createScramUsers();
         }
@@ -308,28 +285,14 @@ public class KafkaContainerCluster implements AutoCloseable {
         LOG.info("Kafka container cluster started. Bootstrap servers: {}", bootstrapServers());
     }
 
-    private void waitForBrokerConnectivity() {
-        for (int brokerId : brokerIds()) {
-            GenericContainer<?> container = containers.get(brokerId);
-            LOG.debug("Waiting for broker {} to be ready on port {}", brokerId, KAFKA_PORT);
-            Wait.forListeningPort()
-                .withStartupTimeout(Duration.ofMinutes(2))
-                .waitUntilReady(container);
-        }
-        LOG.debug("All brokers are listening on their ports");
-    }
-
     private void createScramUsers() {
-        // Pick any broker container to run the kafka-configs command
         GenericContainer<?> brokerContainer = containers.entrySet().stream()
             .filter(e -> getProcessRoles(e.getKey()).contains("broker"))
             .map(Map.Entry::getValue)
             .findFirst()
             .orElseThrow(() -> new RuntimeException("No broker container found"));
 
-        // Create admin user
         createScramUser(brokerContainer, JaasUtils.KAFKA_PLAIN_ADMIN, JaasUtils.KAFKA_PLAIN_ADMIN_PASSWORD);
-        // Create test user
         createScramUser(brokerContainer, JaasUtils.KAFKA_PLAIN_USER1, JaasUtils.KAFKA_PLAIN_USER1_PASSWORD);
     }
 
@@ -355,7 +318,6 @@ public class KafkaContainerCluster implements AutoCloseable {
 
     /**
      * Sets the directory where container logs will be collected on stop.
-     * Each container's logs will be written to a separate file named by role and node ID.
      */
     public void setLogDir(Path logDir) {
         this.logDir = logDir;
@@ -490,9 +452,6 @@ public class KafkaContainerCluster implements AutoCloseable {
         createContainers();
     }
 
-    private static final int MAX_DOCKER_RETRIES = 3;
-    private static final long DOCKER_RETRY_BACKOFF_MS = 2000;
-
     private static void retryOnDockerFailure(Runnable action, String description) {
         for (int attempt = 1; attempt <= MAX_DOCKER_RETRIES; attempt++) {
             try {
@@ -540,7 +499,7 @@ public class KafkaContainerCluster implements AutoCloseable {
      * Returns the cluster ID.
      */
     public String clusterId() {
-        return "test-container-cluster-id-01";
+        return CLUSTER_ID;
     }
 
     /**
@@ -571,48 +530,5 @@ public class KafkaContainerCluster implements AutoCloseable {
     @Override
     public void close() {
         stop();
-    }
-
-    /**
-     * A Kafka container node that injects the correct advertised listeners
-     * (with Docker-mapped host port) via a startup script before Kafka starts.
-     */
-    private static class KafkaNode extends GenericContainer<KafkaNode> {
-        private final int nodeId;
-        private final String processRoles;
-
-        KafkaNode(DockerImageName image, int nodeId, String processRoles) {
-            super(image);
-            this.nodeId = nodeId;
-            this.processRoles = processRoles;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            return super.equals(o);
-        }
-
-        @Override
-        public int hashCode() {
-            return super.hashCode();
-        }
-
-        @Override
-        protected void containerIsStarting(InspectContainerResponse containerInfo) {
-            super.containerIsStarting(containerInfo);
-
-            StringBuilder script = new StringBuilder("#!/bin/bash\n");
-            if (processRoles.contains("broker")) {
-                int mappedPort = this.getMappedPort(KAFKA_PORT);
-                script.append("export KAFKA_ADVERTISED_LISTENERS='EXTERNAL://localhost:")
-                    .append(mappedPort)
-                    .append(",INTERNAL://kafka-").append(nodeId).append(":").append(INTERNAL_PORT)
-                    .append("'\n");
-            }
-            script.append("exec /etc/kafka/docker/run\n");
-            copyFileToContainer(
-                Transferable.of(script.toString().getBytes(StandardCharsets.UTF_8), 0777),
-                STARTER_SCRIPT);
-        }
     }
 }

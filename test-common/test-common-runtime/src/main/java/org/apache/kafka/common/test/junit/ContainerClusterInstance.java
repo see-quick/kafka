@@ -28,7 +28,7 @@ import org.apache.kafka.common.acl.AclBindingFilter;
 import org.apache.kafka.common.network.ListenerName;
 import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.common.test.ClusterInstance;
-import org.apache.kafka.common.test.KafkaContainerCluster;
+import org.apache.kafka.common.test.container.KafkaContainerCluster;
 import org.apache.kafka.common.test.api.ClusterConfig;
 import org.apache.kafka.common.test.api.ExecutionMode;
 import org.apache.kafka.common.test.api.Type;
