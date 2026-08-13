@@ -171,13 +171,13 @@ public class KafkaContainerCluster implements AutoCloseable {
     private Map<String, String> buildNodeConfig(int nodeId, String processRoles, String quorumVoters) {
         Map<String, String> config = new HashMap<>();
 
-        config.put("KAFKA_NODE_ID", String.valueOf(nodeId));
-        config.put("KAFKA_PROCESS_ROLES", processRoles);
-        config.put("KAFKA_CONTROLLER_QUORUM_VOTERS", quorumVoters);
-        config.put("CLUSTER_ID", CLUSTER_ID);
+        config.put(KafkaEnvVars.NODE_ID, String.valueOf(nodeId));
+        config.put(KafkaEnvVars.PROCESS_ROLES, processRoles);
+        config.put(KafkaEnvVars.CONTROLLER_QUORUM_VOTERS, quorumVoters);
+        config.put(KafkaEnvVars.CLUSTER_ID, CLUSTER_ID);
 
         if (processRoles.contains("broker")) {
-            config.put("KAFKA_LISTENERS",
+            config.put(KafkaEnvVars.LISTENERS,
                 "EXTERNAL://0.0.0.0:" + KAFKA_PORT +
                 ",INTERNAL://0.0.0.0:" + INTERNAL_PORT +
                 (processRoles.contains("controller") ? ",CONTROLLER://0.0.0.0:" + CONTROLLER_PORT : ""));
@@ -185,24 +185,24 @@ public class KafkaContainerCluster implements AutoCloseable {
             // KAFKA_ADVERTISED_LISTENERS is NOT set here — it is injected by the
             // containerIsStarting() hook with the correct Docker-mapped host port.
 
-            config.put("KAFKA_LISTENER_SECURITY_PROTOCOL_MAP",
+            config.put(KafkaEnvVars.LISTENER_SECURITY_PROTOCOL_MAP,
                 "EXTERNAL:" + nodeConfig.securityProtocol().name() + ",INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT");
-            config.put("KAFKA_INTER_BROKER_LISTENER_NAME", "INTERNAL");
+            config.put(KafkaEnvVars.INTER_BROKER_LISTENER_NAME, "INTERNAL");
         } else {
-            config.put("KAFKA_LISTENERS", "CONTROLLER://0.0.0.0:" + CONTROLLER_PORT);
-            config.put("KAFKA_LISTENER_SECURITY_PROTOCOL_MAP", "CONTROLLER:PLAINTEXT");
+            config.put(KafkaEnvVars.LISTENERS, "CONTROLLER://0.0.0.0:" + CONTROLLER_PORT);
+            config.put(KafkaEnvVars.LISTENER_SECURITY_PROTOCOL_MAP, "CONTROLLER:PLAINTEXT");
         }
 
-        config.put("KAFKA_CONTROLLER_LISTENER_NAMES", "CONTROLLER");
-        config.put("KAFKA_LOG_DIRS", "/var/lib/kafka/data");
-        config.put("KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR", String.valueOf(Math.min(numBrokers, 3)));
-        config.put("KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS", "0");
-        config.put("KAFKA_TRANSACTION_STATE_LOG_MIN_ISR", "1");
-        config.put("KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR", String.valueOf(Math.min(numBrokers, 3)));
+        config.put(KafkaEnvVars.CONTROLLER_LISTENER_NAMES, "CONTROLLER");
+        config.put(KafkaEnvVars.LOG_DIRS, "/var/lib/kafka/data");
+        config.put(KafkaEnvVars.OFFSETS_TOPIC_REPLICATION_FACTOR, String.valueOf(Math.min(numBrokers, 3)));
+        config.put(KafkaEnvVars.GROUP_INITIAL_REBALANCE_DELAY_MS, "0");
+        config.put(KafkaEnvVars.TRANSACTION_STATE_LOG_MIN_ISR, "1");
+        config.put(KafkaEnvVars.TRANSACTION_STATE_LOG_REPLICATION_FACTOR, String.valueOf(Math.min(numBrokers, 3)));
 
         if (processRoles.contains("broker") && isSaslProtocol()) {
             String saslMechanism = nodeConfig.saslMechanism();
-            config.put("KAFKA_SASL_ENABLED_MECHANISMS", saslMechanism);
+            config.put(KafkaEnvVars.SASL_ENABLED_MECHANISMS, saslMechanism);
             if ("PLAIN".equals(saslMechanism)) {
                 String jaasConfig = "org.apache.kafka.common.security.plain.PlainLoginModule required "
                     + "username=\"" + JaasUtils.KAFKA_PLAIN_ADMIN + "\" "
