@@ -56,9 +56,12 @@ class KafkaNode extends GenericContainer<KafkaNode> {
         StringBuilder script = new StringBuilder("#!/bin/bash\n");
         if (processRoles.contains("broker")) {
             int mappedPort = this.getMappedPort(KafkaContainerCluster.KAFKA_PORT);
-            script.append("export KAFKA_ADVERTISED_LISTENERS='EXTERNAL://localhost:")
+            script.append("export ")
+                .append(KafkaEnvVars.ADVERTISED_LISTENERS)
+                .append("='").append(KafkaListenerNames.EXTERNAL).append("://localhost:")
                 .append(mappedPort)
-                .append(",INTERNAL://kafka-").append(nodeId).append(":").append(KafkaContainerCluster.INTERNAL_PORT)
+                .append(",").append(KafkaListenerNames.INTERNAL).append("://kafka-")
+                .append(nodeId).append(":").append(KafkaContainerCluster.INTERNAL_PORT)
                 .append("'\n");
         }
         script.append("exec /etc/kafka/docker/run\n");
