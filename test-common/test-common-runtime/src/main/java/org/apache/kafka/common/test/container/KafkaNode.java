@@ -31,12 +31,12 @@ import java.nio.charset.StandardCharsets;
  */
 class KafkaNode extends GenericContainer<KafkaNode> {
     private final int nodeId;
-    private final String processRoles;
+    private final KafkaNodeRole role;
 
-    KafkaNode(DockerImageName image, int nodeId, String processRoles) {
+    KafkaNode(DockerImageName image, int nodeId, KafkaNodeRole role) {
         super(image);
         this.nodeId = nodeId;
-        this.processRoles = processRoles;
+        this.role = role;
     }
 
     @Override
@@ -54,7 +54,7 @@ class KafkaNode extends GenericContainer<KafkaNode> {
         super.containerIsStarting(containerInfo);
 
         StringBuilder script = new StringBuilder("#!/bin/bash\n");
-        if (processRoles.contains("broker")) {
+        if (role.isBroker()) {
             int mappedPort = this.getMappedPort(KafkaContainerCluster.KAFKA_PORT);
             script.append("export ")
                 .append(KafkaEnvVars.ADVERTISED_LISTENERS)

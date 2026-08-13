@@ -117,19 +117,19 @@ public class KafkaContainerCluster implements AutoCloseable {
         int totalNodes = combined ? Math.max(numBrokers, numControllers) : numBrokers + numControllers;
 
         for (int nodeId = 0; nodeId < totalNodes; nodeId++) {
-            String processRoles = getProcessRoles(nodeId);
-            Map<String, String> config = buildNodeConfig(nodeId, processRoles, quorumVoters);
+            KafkaNodeRole role = getNodeRole(nodeId);
+            Map<String, String> config = buildNodeConfig(nodeId, role, quorumVoters);
 
-            KafkaNode container = new KafkaNode(imageName, nodeId, processRoles);
+            KafkaNode container = new KafkaNode(imageName, nodeId, role);
 
             container
                 .withNetwork(network)
                 .withNetworkAliases("kafka-" + nodeId)
                 .withEnv(Collections.unmodifiableMap(config));
 
-            if (processRoles.contains("broker") && processRoles.contains("controller")) {
+            if (role.isBroker() && role.isController()) {
                 container.withExposedPorts(KAFKA_PORT, CONTROLLER_PORT);
-            } else if (processRoles.contains("broker")) {
+            } else if (role.isBroker()) {
                 container.withExposedPorts(KAFKA_PORT);
             } else {
                 container.withExposedPorts(CONTROLLER_PORT);
@@ -146,16 +146,16 @@ public class KafkaContainerCluster implements AutoCloseable {
         }
     }
 
-    private String getProcessRoles(int nodeId) {
+    private KafkaNodeRole getNodeRole(int nodeId) {
         if (combined) {
             boolean isBroker = nodeId < numBrokers;
             boolean isController = nodeId < numControllers;
-            if (isBroker && isController) return "broker,controller";
-            if (isBroker) return "broker";
-            return "controller";
+            if (isBroker && isController) return KafkaNodeRole.COMBINED;
+            if (isBroker) return KafkaNodeRole.BROKER;
+            return KafkaNodeRole.CONTROLLER;
         } else {
-            if (nodeId < numControllers) return "controller";
-            return "broker";
+            if (nodeId < numControllers) return KafkaNodeRole.CONTROLLER;
+            return KafkaNodeRole.BROKER;
         }
     }
 
@@ -168,19 +168,19 @@ public class KafkaContainerCluster implements AutoCloseable {
         return sb.toString();
     }
 
-    private Map<String, String> buildNodeConfig(int nodeId, String processRoles, String quorumVoters) {
+    private Map<String, String> buildNodeConfig(int nodeId, KafkaNodeRole role, String quorumVoters) {
         Map<String, String> config = new HashMap<>();
 
         config.put(KafkaEnvVars.NODE_ID, String.valueOf(nodeId));
-        config.put(KafkaEnvVars.PROCESS_ROLES, processRoles);
+        config.put(KafkaEnvVars.PROCESS_ROLES, role.getProcessRoles());
         config.put(KafkaEnvVars.CONTROLLER_QUORUM_VOTERS, quorumVoters);
         config.put(KafkaEnvVars.CLUSTER_ID, CLUSTER_ID);
 
-        if (processRoles.contains("broker")) {
+        if (role.isBroker()) {
             config.put(KafkaEnvVars.LISTENERS,
                 Listener.EXTERNAL + "://0.0.0.0:" + KAFKA_PORT +
                 "," + Listener.INTERNAL + "://0.0.0.0:" + INTERNAL_PORT +
-                (processRoles.contains("controller") ? "," + Listener.CONTROLLER + "://0.0.0.0:" + CONTROLLER_PORT : ""));
+                (role.isController() ? "," + Listener.CONTROLLER + "://0.0.0.0:" + CONTROLLER_PORT : ""));
 
             // KAFKA_ADVERTISED_LISTENERS is NOT set here — it is injected by the
             // containerIsStarting() hook with the correct Docker-mapped host port.
@@ -202,7 +202,7 @@ public class KafkaContainerCluster implements AutoCloseable {
         config.put(KafkaEnvVars.TRANSACTION_STATE_LOG_MIN_ISR, "1");
         config.put(KafkaEnvVars.TRANSACTION_STATE_LOG_REPLICATION_FACTOR, String.valueOf(Math.min(numBrokers, 3)));
 
-        if (processRoles.contains("broker") && isSaslProtocol()) {
+        if (role.isBroker() && isSaslProtocol()) {
             String saslMechanism = nodeConfig.saslMechanism();
             config.put(KafkaEnvVars.SASL_ENABLED_MECHANISMS, saslMechanism);
             if ("PLAIN".equals(saslMechanism)) {
@@ -285,7 +285,7 @@ public class KafkaContainerCluster implements AutoCloseable {
 
     private void createScramUsers() {
         GenericContainer<?> brokerContainer = containers.entrySet().stream()
-            .filter(e -> getProcessRoles(e.getKey()).contains("broker"))
+            .filter(e -> getNodeRole(e.getKey()).isBroker())
             .map(Map.Entry::getValue)
             .findFirst()
             .orElseThrow(() -> new RuntimeException("No broker container found"));
@@ -380,11 +380,11 @@ public class KafkaContainerCluster implements AutoCloseable {
         for (Map.Entry<Integer, GenericContainer<?>> entry : containers.entrySet()) {
             int nodeId = entry.getKey();
             GenericContainer<?> container = entry.getValue();
-            String role = getProcessRoles(nodeId);
+            KafkaNodeRole nodeRole = getNodeRole(nodeId);
             String fileName;
-            if (role.contains("broker") && role.contains("controller")) {
+            if (nodeRole == KafkaNodeRole.COMBINED) {
                 fileName = "kafka-combined-" + nodeId + ".log";
-            } else if (role.contains("broker")) {
+            } else if (nodeRole.isBroker()) {
                 fileName = "kafka-broker-" + nodeId + ".log";
             } else {
                 fileName = "kafka-controller-" + nodeId + ".log";
@@ -476,7 +476,7 @@ public class KafkaContainerCluster implements AutoCloseable {
      */
     public String bootstrapServers() {
         return containers.entrySet().stream()
-            .filter(e -> getProcessRoles(e.getKey()).contains("broker"))
+            .filter(e -> getNodeRole(e.getKey()).isBroker())
             .filter(e -> runningNodeIds.contains(e.getKey()))
             .map(e -> "localhost:" + e.getValue().getMappedPort(KAFKA_PORT))
             .collect(Collectors.joining(","));
@@ -487,7 +487,7 @@ public class KafkaContainerCluster implements AutoCloseable {
      */
     public String bootstrapControllers() {
         return containers.entrySet().stream()
-            .filter(e -> getProcessRoles(e.getKey()).contains("controller"))
+            .filter(e -> getNodeRole(e.getKey()).isController())
             .filter(e -> runningNodeIds.contains(e.getKey()))
             .map(e -> "localhost:" + e.getValue().getMappedPort(CONTROLLER_PORT))
             .collect(Collectors.joining(","));
@@ -505,7 +505,7 @@ public class KafkaContainerCluster implements AutoCloseable {
      */
     public Set<Integer> brokerIds() {
         return containers.keySet().stream()
-            .filter(id -> getProcessRoles(id).contains("broker"))
+            .filter(id -> getNodeRole(id).isBroker())
             .collect(Collectors.toSet());
     }
 
@@ -514,7 +514,7 @@ public class KafkaContainerCluster implements AutoCloseable {
      */
     public Set<Integer> controllerIds() {
         return containers.keySet().stream()
-            .filter(id -> getProcessRoles(id).contains("controller"))
+            .filter(id -> getNodeRole(id).isController())
             .collect(Collectors.toSet());
     }
 
