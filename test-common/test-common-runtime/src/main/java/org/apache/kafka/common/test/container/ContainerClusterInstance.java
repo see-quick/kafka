@@ -63,13 +63,16 @@ public class ContainerClusterInstance implements ClusterInstance {
         this.clusterConfig = clusterConfig;
         this.isCombined = isCombined;
         this.listenerName = clusterConfig.brokerListenerName();
+        KafkaNodeConfig nodeConfig = KafkaNodeConfig.builder()
+            .securityProtocol(clusterConfig.brokerSecurityProtocol())
+            .saslMechanism(clusterConfig.saslMechanism())
+            .serverProperties(clusterConfig.serverProperties())
+            .build();
         this.cluster = new KafkaContainerCluster(
             clusterConfig.numBrokers(),
             clusterConfig.numControllers(),
             isCombined,
-            clusterConfig.serverProperties(),
-            clusterConfig.brokerSecurityProtocol(),
-            clusterConfig.saslMechanism(),
+            nodeConfig,
             clusterConfig.containerImage().orElse(null)
         );
     }

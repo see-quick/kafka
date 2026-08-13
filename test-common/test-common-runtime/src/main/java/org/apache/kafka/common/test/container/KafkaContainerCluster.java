@@ -79,9 +79,7 @@ public class KafkaContainerCluster implements AutoCloseable {
     private final int numBrokers;
     private final int numControllers;
     private final boolean combined;
-    private final Map<String, String> serverProperties;
-    private final SecurityProtocol securityProtocol;
-    private final String saslMechanism;
+    private final KafkaNodeConfig nodeConfig;
     private final Network network;
     private final Map<Integer, GenericContainer<?>> containers;
     // Tracks which nodes are running internally rather than querying the Docker API
@@ -95,15 +93,12 @@ public class KafkaContainerCluster implements AutoCloseable {
 
     @SuppressWarnings("resource")
     public KafkaContainerCluster(int numBrokers, int numControllers, boolean combined,
-                                  Map<String, String> serverProperties,
-                                  SecurityProtocol securityProtocol, String saslMechanism,
+                                  KafkaNodeConfig nodeConfig,
                                   String containerImage) {
         this.numBrokers = numBrokers;
         this.numControllers = numControllers;
         this.combined = combined;
-        this.serverProperties = new HashMap<>(serverProperties);
-        this.securityProtocol = securityProtocol;
-        this.saslMechanism = saslMechanism;
+        this.nodeConfig = nodeConfig;
         this.network = Network.newNetwork();
         this.containers = new TreeMap<>();
         this.runningNodeIds = ConcurrentHashMap.newKeySet();
@@ -191,7 +186,7 @@ public class KafkaContainerCluster implements AutoCloseable {
             // containerIsStarting() hook with the correct Docker-mapped host port.
 
             config.put("KAFKA_LISTENER_SECURITY_PROTOCOL_MAP",
-                "EXTERNAL:" + securityProtocol.name() + ",INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT");
+                "EXTERNAL:" + nodeConfig.securityProtocol().name() + ",INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT");
             config.put("KAFKA_INTER_BROKER_LISTENER_NAME", "INTERNAL");
         } else {
             config.put("KAFKA_LISTENERS", "CONTROLLER://0.0.0.0:" + CONTROLLER_PORT);
@@ -206,6 +201,7 @@ public class KafkaContainerCluster implements AutoCloseable {
         config.put("KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR", String.valueOf(Math.min(numBrokers, 3)));
 
         if (processRoles.contains("broker") && isSaslProtocol()) {
+            String saslMechanism = nodeConfig.saslMechanism();
             config.put("KAFKA_SASL_ENABLED_MECHANISMS", saslMechanism);
             if ("PLAIN".equals(saslMechanism)) {
                 String jaasConfig = "org.apache.kafka.common.security.plain.PlainLoginModule required "
@@ -221,7 +217,7 @@ public class KafkaContainerCluster implements AutoCloseable {
             }
         }
 
-        for (Map.Entry<String, String> entry : serverProperties.entrySet()) {
+        for (Map.Entry<String, String> entry : nodeConfig.serverProperties().entrySet()) {
             config.put("KAFKA_" + entry.getKey().replace(".", "_").toUpperCase(Locale.ROOT), entry.getValue());
         }
 
@@ -229,8 +225,8 @@ public class KafkaContainerCluster implements AutoCloseable {
     }
 
     private boolean isSaslProtocol() {
-        return securityProtocol == SecurityProtocol.SASL_PLAINTEXT
-            || securityProtocol == SecurityProtocol.SASL_SSL;
+        return nodeConfig.securityProtocol() == SecurityProtocol.SASL_PLAINTEXT
+            || nodeConfig.securityProtocol() == SecurityProtocol.SASL_SSL;
     }
 
     /**
@@ -246,7 +242,7 @@ public class KafkaContainerCluster implements AutoCloseable {
      */
     public void start() {
         LOG.info("Starting Kafka container cluster with {} brokers and {} controllers (combined={}, protocol={})",
-            numBrokers, numControllers, combined, securityProtocol);
+            numBrokers, numControllers, combined, nodeConfig.securityProtocol());
 
         Exception lastException = null;
         for (int attempt = 1; attempt <= MAX_DOCKER_RETRIES; attempt++) {
@@ -278,7 +274,7 @@ public class KafkaContainerCluster implements AutoCloseable {
 
         runningNodeIds.addAll(containers.keySet());
 
-        if (isSaslProtocol() && saslMechanism != null && saslMechanism.startsWith("SCRAM-")) {
+        if (isSaslProtocol() && nodeConfig.saslMechanism() != null && nodeConfig.saslMechanism().startsWith("SCRAM-")) {
             createScramUsers();
         }
 
@@ -302,7 +298,7 @@ public class KafkaContainerCluster implements AutoCloseable {
                 "/opt/kafka/bin/kafka-configs.sh",
                 "--bootstrap-server", "localhost:" + INTERNAL_PORT,
                 "--alter",
-                "--add-config", saslMechanism + "=[password=" + password + ",iterations=4096]",
+                "--add-config", nodeConfig.saslMechanism() + "=[password=" + password + ",iterations=4096]",
                 "--entity-type", "users",
                 "--entity-name", username
             );
