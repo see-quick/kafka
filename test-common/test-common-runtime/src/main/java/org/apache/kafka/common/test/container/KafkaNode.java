@@ -60,7 +60,7 @@ class KafkaNode extends GenericContainer<KafkaNode> {
                 .append(KafkaEnvVars.ADVERTISED_LISTENERS)
                 .append("='").append(Listener.EXTERNAL).append("://localhost:")
                 .append(mappedPort)
-                .append(",").append(Listener.INTERNAL).append("://kafka-")
+                .append(",").append(Listener.INTERNAL).append("://").append(KafkaContainerCluster.DNS_PREFIX)
                 .append(nodeId).append(":").append(KafkaContainerCluster.INTERNAL_PORT)
                 .append("'\n");
         }

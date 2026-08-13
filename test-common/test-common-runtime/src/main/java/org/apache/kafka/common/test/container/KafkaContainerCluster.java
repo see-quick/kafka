@@ -73,6 +73,7 @@ public class KafkaContainerCluster implements AutoCloseable {
     private static final int CONTROLLER_PORT = 9093;
     static final int INTERNAL_PORT = 9094;
     static final String CLUSTER_ID = "test-container-cluster-id-01";
+    static final String DNS_PREFIX = "kafka-";
     private static final int MAX_DOCKER_RETRIES = 3;
     private static final long DOCKER_RETRY_BACKOFF_MS = 2000;
 
@@ -124,7 +125,7 @@ public class KafkaContainerCluster implements AutoCloseable {
 
             container
                 .withNetwork(network)
-                .withNetworkAliases("kafka-" + nodeId)
+                .withNetworkAliases(DNS_PREFIX + nodeId)
                 .withEnv(Collections.unmodifiableMap(config));
 
             if (role.isBroker() && role.isController()) {
@@ -163,7 +164,7 @@ public class KafkaContainerCluster implements AutoCloseable {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < numControllers; i++) {
             if (!sb.isEmpty()) sb.append(",");
-            sb.append(i).append("@kafka-").append(i).append(":").append(CONTROLLER_PORT);
+            sb.append(i).append("@").append(DNS_PREFIX).append(i).append(":").append(CONTROLLER_PORT);
         }
         return sb.toString();
     }
