@@ -162,10 +162,9 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
         // Process single @ClusterTest annotation
         ClusterTest clusterTestAnnot = context.getRequiredTestMethod().getDeclaredAnnotation(ClusterTest.class);
         if (clusterTestAnnot != null) {
-            String[] images = resolveContainerImages(context, clusterTestAnnot.containerImages(), clusterTestAnnot.containerImageSource());
             generatedContexts.addAll(processClusterTestConfigs(context,
                 new ClusterTestConfig[]{ClusterTestConfig.from(clusterTestAnnot)},
-                new String[][]{images}, defaults));
+                new String[][]{new String[0]}, defaults));
         }
 
         // Process multiple @ClusterTest annotations within @ClusterTests
@@ -175,9 +174,7 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
             ClusterTestConfig[] configs = Arrays.stream(annots)
                 .map(ClusterTestConfig::from)
                 .toArray(ClusterTestConfig[]::new);
-            String[][] images = Arrays.stream(annots)
-                .map(a -> resolveContainerImages(context, a.containerImages(), a.containerImageSource()))
-                .toArray(String[][]::new);
+            String[][] images = new String[annots.length][0];
             generatedContexts.addAll(processClusterTestConfigs(context, configs, images, defaults));
         }
 

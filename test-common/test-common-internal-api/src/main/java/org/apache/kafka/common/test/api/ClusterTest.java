@@ -58,6 +58,4 @@ public @interface ClusterTest {
     String[] tags() default {};
     ClusterFeature[] features() default {};
     boolean standalone() default false;
-    String[] containerImages() default {};
-    String containerImageSource() default "";
 }

@@ -70,7 +70,7 @@ public final class KafkaVersions {
 
     /**
      * Returns container image names for all cross-version test versions.
-     * Can be referenced from {@code @ClusterTest(containerImageSource = "crossVersionImages")}
+     * Can be referenced from {@code @ClusterSystemTest(containerImageSource = "crossVersionImages")}
      * when the test class has a static method delegating to this.
      */
     public static String[] crossVersionImages() {
