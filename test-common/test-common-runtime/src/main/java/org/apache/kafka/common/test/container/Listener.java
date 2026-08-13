@@ -18,19 +18,40 @@
 package org.apache.kafka.common.test.container;
 
 /**
- * Listener name constants used in Kafka container cluster configuration.
- * <ul>
- *   <li>{@code EXTERNAL} — client-facing listener, accessible from the Docker host</li>
- *   <li>{@code INTERNAL} — inter-broker listener, accessible within the Docker network</li>
- *   <li>{@code CONTROLLER} — KRaft controller listener, accessible within the Docker network</li>
- * </ul>
+ * Represents a Kafka listener with its name and role.
+ * Defines listener name constants to avoid magic strings across the codebase.
  */
-final class KafkaListenerNames {
+class Listener {
 
     static final String EXTERNAL = "EXTERNAL";
     static final String INTERNAL = "INTERNAL";
     static final String CONTROLLER = "CONTROLLER";
 
-    private KafkaListenerNames() {
+    /**
+     * Defines the role of a Kafka listener.
+     */
+    enum Role {
+        /** Client-facing listener, accessible from the Docker host */
+        CLIENT,
+        /** Inter-broker communication listener, accessible within the Docker network */
+        INTER_BROKER,
+        /** KRaft controller listener, accessible within the Docker network */
+        CONTROLLER
+    }
+
+    private final String name;
+    private final Role role;
+
+    Listener(String name, Role role) {
+        this.name = name;
+        this.role = role;
+    }
+
+    public String name() {
+        return name;
+    }
+
+    public Role role() {
+        return role;
     }
 }

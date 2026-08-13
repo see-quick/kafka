@@ -178,24 +178,24 @@ public class KafkaContainerCluster implements AutoCloseable {
 
         if (processRoles.contains("broker")) {
             config.put(KafkaEnvVars.LISTENERS,
-                KafkaListenerNames.EXTERNAL + "://0.0.0.0:" + KAFKA_PORT +
-                "," + KafkaListenerNames.INTERNAL + "://0.0.0.0:" + INTERNAL_PORT +
-                (processRoles.contains("controller") ? "," + KafkaListenerNames.CONTROLLER + "://0.0.0.0:" + CONTROLLER_PORT : ""));
+                Listener.EXTERNAL + "://0.0.0.0:" + KAFKA_PORT +
+                "," + Listener.INTERNAL + "://0.0.0.0:" + INTERNAL_PORT +
+                (processRoles.contains("controller") ? "," + Listener.CONTROLLER + "://0.0.0.0:" + CONTROLLER_PORT : ""));
 
             // KAFKA_ADVERTISED_LISTENERS is NOT set here — it is injected by the
             // containerIsStarting() hook with the correct Docker-mapped host port.
 
             config.put(KafkaEnvVars.LISTENER_SECURITY_PROTOCOL_MAP,
-                KafkaListenerNames.EXTERNAL + ":" + nodeConfig.securityProtocol().name() +
-                "," + KafkaListenerNames.INTERNAL + ":PLAINTEXT" +
-                "," + KafkaListenerNames.CONTROLLER + ":PLAINTEXT");
-            config.put(KafkaEnvVars.INTER_BROKER_LISTENER_NAME, KafkaListenerNames.INTERNAL);
+                Listener.EXTERNAL + ":" + nodeConfig.securityProtocol().name() +
+                "," + Listener.INTERNAL + ":PLAINTEXT" +
+                "," + Listener.CONTROLLER + ":PLAINTEXT");
+            config.put(KafkaEnvVars.INTER_BROKER_LISTENER_NAME, Listener.INTERNAL);
         } else {
-            config.put(KafkaEnvVars.LISTENERS, KafkaListenerNames.CONTROLLER + "://0.0.0.0:" + CONTROLLER_PORT);
-            config.put(KafkaEnvVars.LISTENER_SECURITY_PROTOCOL_MAP, KafkaListenerNames.CONTROLLER + ":PLAINTEXT");
+            config.put(KafkaEnvVars.LISTENERS, Listener.CONTROLLER + "://0.0.0.0:" + CONTROLLER_PORT);
+            config.put(KafkaEnvVars.LISTENER_SECURITY_PROTOCOL_MAP, Listener.CONTROLLER + ":PLAINTEXT");
         }
 
-        config.put(KafkaEnvVars.CONTROLLER_LISTENER_NAMES, KafkaListenerNames.CONTROLLER);
+        config.put(KafkaEnvVars.CONTROLLER_LISTENER_NAMES, Listener.CONTROLLER);
         config.put(KafkaEnvVars.LOG_DIRS, "/var/lib/kafka/data");
         config.put(KafkaEnvVars.OFFSETS_TOPIC_REPLICATION_FACTOR, String.valueOf(Math.min(numBrokers, 3)));
         config.put(KafkaEnvVars.GROUP_INITIAL_REBALANCE_DELAY_MS, "0");
@@ -211,11 +211,11 @@ public class KafkaContainerCluster implements AutoCloseable {
                     + "password=\"" + JaasUtils.KAFKA_PLAIN_ADMIN_PASSWORD + "\" "
                     + "user_" + JaasUtils.KAFKA_PLAIN_ADMIN + "=\"" + JaasUtils.KAFKA_PLAIN_ADMIN_PASSWORD + "\" "
                     + "user_" + JaasUtils.KAFKA_PLAIN_USER1 + "=\"" + JaasUtils.KAFKA_PLAIN_USER1_PASSWORD + "\";";
-                config.put("KAFKA_LISTENER_NAME_" + KafkaListenerNames.EXTERNAL + "_PLAIN_SASL_JAAS_CONFIG", jaasConfig);
+                config.put("KAFKA_LISTENER_NAME_" + Listener.EXTERNAL + "_PLAIN_SASL_JAAS_CONFIG", jaasConfig);
             } else if (saslMechanism != null && saslMechanism.startsWith("SCRAM-")) {
                 String envMechanism = saslMechanism.replace("-", "__");
                 String jaasConfig = "org.apache.kafka.common.security.scram.ScramLoginModule required;";
-                config.put("KAFKA_LISTENER_NAME_" + KafkaListenerNames.EXTERNAL + "_" + envMechanism + "_SASL_JAAS_CONFIG", jaasConfig);
+                config.put("KAFKA_LISTENER_NAME_" + Listener.EXTERNAL + "_" + envMechanism + "_SASL_JAAS_CONFIG", jaasConfig);
             }
         }
 

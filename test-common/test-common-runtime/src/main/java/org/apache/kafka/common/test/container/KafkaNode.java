@@ -58,9 +58,9 @@ class KafkaNode extends GenericContainer<KafkaNode> {
             int mappedPort = this.getMappedPort(KafkaContainerCluster.KAFKA_PORT);
             script.append("export ")
                 .append(KafkaEnvVars.ADVERTISED_LISTENERS)
-                .append("='").append(KafkaListenerNames.EXTERNAL).append("://localhost:")
+                .append("='").append(Listener.EXTERNAL).append("://localhost:")
                 .append(mappedPort)
-                .append(",").append(KafkaListenerNames.INTERNAL).append("://kafka-")
+                .append(",").append(Listener.INTERNAL).append("://kafka-")
                 .append(nodeId).append(":").append(KafkaContainerCluster.INTERNAL_PORT)
                 .append("'\n");
         }
