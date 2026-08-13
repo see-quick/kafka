@@ -32,6 +32,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * JUnit 5 {@link TestTemplateInvocationContext} for container-based Kafka clusters.
@@ -46,6 +47,7 @@ public class ContainerClusterInvocationContext implements TestTemplateInvocation
     private final String baseDisplayName;
     private final ClusterConfig clusterConfig;
     private final boolean isCombined;
+    private final AtomicInteger attemptCounter = new AtomicInteger(0);
 
     public ContainerClusterInvocationContext(String baseDisplayName, ClusterConfig clusterConfig, boolean isCombined) {
         this.baseDisplayName = baseDisplayName;
@@ -65,6 +67,7 @@ public class ContainerClusterInvocationContext implements TestTemplateInvocation
         ContainerClusterInstance clusterInstance = new ContainerClusterInstance(clusterConfig, isCombined);
         return List.of(
             (BeforeEachCallback) context -> {
+                attemptCounter.incrementAndGet();
                 if (clusterConfig.isAutoStart()) {
                     try {
                         clusterInstance.start();
@@ -90,13 +93,14 @@ public class ContainerClusterInvocationContext implements TestTemplateInvocation
     }
 
     private static final String SESSION_TIMESTAMP =
-        LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+        LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss_SSS"));
 
     private Path buildLogDir(ExtensionContext context) {
         String className = context.getRequiredTestClass().getSimpleName();
         String methodName = context.getRequiredTestMethod().getName();
         String displayName = context.getDisplayName()
             .replaceAll("[^a-zA-Z0-9._-]", "_");
-        return Path.of("build", "test-logs", SESSION_TIMESTAMP, className, methodName, displayName);
+        return Path.of("build", "test-logs", SESSION_TIMESTAMP, className, methodName,
+            displayName, "attempt-" + attemptCounter.get());
     }
 }
