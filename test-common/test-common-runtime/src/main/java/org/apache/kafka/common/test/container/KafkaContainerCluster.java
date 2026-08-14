@@ -324,7 +324,12 @@ public class KafkaContainerCluster implements AutoCloseable {
 
     /**
      * Stops all containers in the cluster, collecting logs beforehand if a log directory is set.
-     * Also removes any Docker networks that were created but leaked by prior retry attempts.
+     *
+     * <p>The Docker network is intentionally NOT closed here. Testcontainers'
+     * {@code ResourceReaper} JVM shutdown hook handles both container removal and
+     * network cleanup in the correct order (containers first, then networks).
+     * Closing the network eagerly causes the reaper to fail with "network not found"
+     * when it later tries to remove containers still referencing that network.
      */
     public void stop() {
         LOG.info("Stopping Kafka container cluster");
@@ -336,35 +341,6 @@ public class KafkaContainerCluster implements AutoCloseable {
             } catch (Exception e) {
                 LOG.warn("Error stopping container", e);
             }
-        }
-        try {
-            network.close();
-        } catch (Exception e) {
-            LOG.warn("Error closing network", e);
-        }
-        pruneOrphanedNetworks();
-    }
-
-    private void pruneOrphanedNetworks() {
-        try {
-            var dockerClient = DockerClientFactory.lazyClient();
-            var networks = dockerClient.listNetworksCmd().exec();
-            for (var net : networks) {
-                if (net.getContainers() != null && !net.getContainers().isEmpty()) {
-                    continue;
-                }
-                String name = net.getName();
-                if ("podman".equals(name) || "bridge".equals(name) || "host".equals(name) || "none".equals(name)) {
-                    continue;
-                }
-                try {
-                    dockerClient.removeNetworkCmd(net.getId()).exec();
-                } catch (Exception e) {
-                    LOG.debug("Could not remove network {}: {}", name, e.getMessage());
-                }
-            }
-        } catch (Exception e) {
-            LOG.warn("Failed to prune orphaned networks", e);
         }
     }
 

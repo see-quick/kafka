@@ -28,7 +28,6 @@ import org.apache.kafka.systemtests.utils.cli.ContainerCommandUtils;
 import org.junit.jupiter.api.Timeout;
 import org.testcontainers.containers.Container;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -92,11 +91,11 @@ public class ConfigCommandST {
     @ClusterSystemTest(brokers = 1, controllers = 1, types = {Type.CO_KRAFT})
     void testDeleteTopicConfig(ClusterInstance cluster) throws Exception {
         String topicName = "config-delete-test-topic";
-        cluster.createTopic(topicName, 1, (short) 1, Map.of("compression.type", "gzip"));
+        cluster.createTopic(topicName, 1, (short) 1, Map.of("retention.ms", "3600000"));
 
         Container.ExecResult result = ContainerCommandUtils.kafkaConfigs(cluster,
             "--alter",
-            "--delete-config", "compression.type",
+            "--delete-config", "retention.ms",
             "--entity-type", "topics",
             "--entity-name", topicName);
 
@@ -105,15 +104,11 @@ public class ConfigCommandST {
 
         try (Admin admin = cluster.admin()) {
             ConfigResource resource = new ConfigResource(ConfigResource.Type.TOPIC, topicName);
-            Collection<ConfigEntry> entries = admin.describeConfigs(List.of(resource))
-                .all().get().get(resource).entries();
-            ConfigEntry entry = entries.stream()
-                .filter(e -> e.name().equals("compression.type"))
-                .findFirst()
-                .orElse(null);
-            assertNotNull(entry, "compression.type config entry should exist");
-            assertEquals("producer", entry.value(),
-                "compression.type should revert to default 'producer' after delete");
+            ConfigEntry entry = admin.describeConfigs(List.of(resource))
+                .all().get().get(resource).get("retention.ms");
+            assertNotNull(entry, "retention.ms config entry should exist");
+            assertEquals(ConfigEntry.ConfigSource.DEFAULT_CONFIG, entry.source(),
+                "retention.ms should revert to DEFAULT_CONFIG source after delete");
         }
     }
 
