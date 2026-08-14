@@ -35,6 +35,8 @@ import org.apache.kafka.common.test.junit.RaftClusterInvocationContext;
 import org.apache.kafka.server.authorizer.Authorizer;
 import org.apache.kafka.server.fault.FaultHandlerException;
 
+import org.testcontainers.containers.GenericContainer;
+
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
@@ -125,6 +127,10 @@ public class ContainerClusterInstance implements ClusterInstance {
     @Override
     public String clusterId() {
         return cluster.clusterId();
+    }
+
+    public Map<Integer, GenericContainer<?>> containers() {
+        return cluster.containers();
     }
 
     public void setLogDir(Path logDir) {
