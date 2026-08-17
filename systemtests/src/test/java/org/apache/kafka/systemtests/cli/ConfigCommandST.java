@@ -18,6 +18,7 @@
 package org.apache.kafka.systemtests.cli;
 
 import org.apache.kafka.clients.admin.Admin;
+import org.apache.kafka.clients.admin.AlterConfigOp;
 import org.apache.kafka.clients.admin.ConfigEntry;
 import org.apache.kafka.common.config.ConfigResource;
 import org.apache.kafka.common.test.ClusterInstance;
@@ -28,10 +29,12 @@ import org.apache.kafka.systemtests.utils.cli.ContainerCommandUtils;
 import org.junit.jupiter.api.Timeout;
 import org.testcontainers.containers.Container;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -126,5 +129,78 @@ public class ConfigCommandST {
             "kafka-configs.sh --describe broker failed: " + result.getStderr());
         assertTrue(result.getStdout().contains("Dynamic configs for broker " + brokerId),
             "Describe output should contain broker config header, got: " + result.getStdout());
+    }
+
+    @Timeout(120)
+    @ClusterSystemTest(brokers = 1, controllers = 1, types = {Type.CO_KRAFT, Type.KRAFT})
+    void testUncordonLogDirViaCli(ClusterInstance cluster) throws Exception {
+        int brokerId = cluster.brokerIds().iterator().next();
+        String logDir = "/var/lib/kafka/data";
+
+        // Cordon the log dir via Admin API (forwarded through broker, so it's allowed)
+        try (Admin admin = cluster.admin()) {
+            ConfigResource brokerResource = new ConfigResource(ConfigResource.Type.BROKER, String.valueOf(brokerId));
+            Collection<AlterConfigOp> ops = List.of(
+                new AlterConfigOp(new ConfigEntry("cordoned.log.dirs", logDir), AlterConfigOp.OpType.SET)
+            );
+            admin.incrementalAlterConfigs(Map.of(brokerResource, ops)).all().get();
+        }
+
+        // Verify cordoned.log.dirs appears in CLI describe output
+        Container.ExecResult describeResult = ContainerCommandUtils.kafkaConfigs(cluster,
+            "--describe",
+            "--entity-type", "brokers",
+            "--entity-name", String.valueOf(brokerId));
+        assertEquals(0, describeResult.getExitCode(),
+            "kafka-configs.sh --describe failed: " + describeResult.getStderr());
+        assertTrue(describeResult.getStdout().contains("cordoned.log.dirs"),
+            "Describe output should contain cordoned.log.dirs after cordoning, got: " + describeResult.getStdout());
+
+        // Uncordon via CLI (removes the dynamic config override, allowed without broker forwarding)
+        Container.ExecResult deleteResult = ContainerCommandUtils.kafkaConfigs(cluster,
+            "--alter",
+            "--delete-config", "cordoned.log.dirs",
+            "--entity-type", "brokers",
+            "--entity-name", String.valueOf(brokerId));
+
+        assertEquals(0, deleteResult.getExitCode(),
+            "kafka-configs.sh --delete-config cordoned.log.dirs failed: " + deleteResult.getStderr());
+
+        // Verify cordoned.log.dirs no longer appears in dynamic broker config
+        Container.ExecResult afterDelete = ContainerCommandUtils.kafkaConfigs(cluster,
+            "--describe",
+            "--entity-type", "brokers",
+            "--entity-name", String.valueOf(brokerId));
+        assertEquals(0, afterDelete.getExitCode(),
+            "kafka-configs.sh --describe after delete failed: " + afterDelete.getStderr());
+        assertFalse(afterDelete.getStdout().contains("cordoned.log.dirs"),
+            "cordoned.log.dirs should not appear after uncordoning via CLI, got: " + afterDelete.getStdout());
+    }
+
+    @Timeout(120)
+    @ClusterSystemTest(brokers = 1, controllers = 1, types = {Type.CO_KRAFT, Type.KRAFT})
+    void testDescribeCordonedLogDirsViaCli(ClusterInstance cluster) throws Exception {
+        int brokerId = cluster.brokerIds().iterator().next();
+        String logDir = "/var/lib/kafka/data";
+
+        // Cordon the log dir via Admin API
+        try (Admin admin = cluster.admin()) {
+            ConfigResource brokerResource = new ConfigResource(ConfigResource.Type.BROKER, String.valueOf(brokerId));
+            Collection<AlterConfigOp> ops = List.of(
+                new AlterConfigOp(new ConfigEntry("cordoned.log.dirs", logDir), AlterConfigOp.OpType.SET)
+            );
+            admin.incrementalAlterConfigs(Map.of(brokerResource, ops)).all().get();
+        }
+
+        // Describe via CLI and verify cordoned.log.dirs appears as a dynamic broker config
+        Container.ExecResult result = ContainerCommandUtils.kafkaConfigs(cluster,
+            "--describe",
+            "--entity-type", "brokers",
+            "--entity-name", String.valueOf(brokerId));
+
+        assertEquals(0, result.getExitCode(),
+            "kafka-configs.sh --describe failed: " + result.getStderr());
+        assertTrue(result.getStdout().contains("cordoned.log.dirs"),
+            "Describe output should show cordoned.log.dirs in dynamic broker config, got: " + result.getStdout());
     }
 }
