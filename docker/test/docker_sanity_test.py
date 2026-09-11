@@ -191,7 +191,7 @@ class DockerSanityTest(unittest.TestCase):
             print(constants.FILE_INPUT_ERROR_PREFIX, str(e))
             total_errors.append(str(e))
         # SASL is not supported on native image due to missing reflection config (KAFKA-19584)
-        if self.MODE == "jvm":
+        if self.MODE == "jvm" or self.MODE == "jvm-ubi":
             try:
                 total_errors.extend(self.secure_flow('localhost:9095', constants.SASL_CLIENT_CONFIG, constants.SASL_FLOW_TESTS, constants.SASL_ERROR_PREFIX, constants.SASL_TOPIC))
             except Exception as e:
@@ -227,7 +227,7 @@ def run_tests(image, mode, fixtures_dir):
     DockerSanityTest.MODE = mode
 
     test_classes_to_run = []
-    if mode == "jvm" or mode == "native":
+    if mode == "jvm" or mode == "jvm-ubi" or mode == "native":
         test_classes_to_run = [DockerSanityTestCombinedMode, DockerSanityTestIsolatedMode]
     
     loader = unittest.TestLoader()

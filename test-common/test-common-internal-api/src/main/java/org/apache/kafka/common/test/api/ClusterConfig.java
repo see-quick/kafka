@@ -63,6 +63,10 @@ public class ClusterConfig {
     private final Map<Feature, Short> features;
     private final boolean standalone;
     private final String containerImage;
+    private final Map<String, String> extraEnv;
+    private final Map<String, byte[]> filesToMount;
+    private final Map<String, Object> clientSslConfig;
+    private final Map<String, Object> clientSaslConfig;
 
     @SuppressWarnings("checkstyle:ParameterNumber")
     private ClusterConfig(Set<Type> types, Set<ExecutionMode> executionModes, int brokers, int controllers,
@@ -71,7 +75,8 @@ public class ClusterConfig {
                   SecurityProtocol controllerSecurityProtocol, ListenerName controllerListenerName, File trustStoreFile,
                   MetadataVersion metadataVersion, String saslMechanism, Map<String, String> serverProperties,
                   Map<Integer, Map<String, String>> perServerProperties, List<String> tags, Map<Feature, Short> features,
-                  boolean standalone, String containerImage) {
+                  boolean standalone, String containerImage, Map<String, String> extraEnv, Map<String, byte[]> filesToMount,
+                  Map<String, Object> clientSslConfig, Map<String, Object> clientSaslConfig) {
         // do fail fast. the following values are invalid for kraft modes.
         if (brokers < 0) throw new IllegalArgumentException("Number of brokers must be greater or equal to zero.");
         if (controllers < 0) throw new IllegalArgumentException("Number of controller must be greater or equal to zero.");
@@ -96,6 +101,10 @@ public class ClusterConfig {
         this.features = Objects.requireNonNull(features);
         this.standalone = standalone;
         this.containerImage = containerImage;
+        this.extraEnv = Objects.requireNonNull(extraEnv);
+        this.filesToMount = Objects.requireNonNull(filesToMount);
+        this.clientSslConfig = Objects.requireNonNull(clientSslConfig);
+        this.clientSaslConfig = Objects.requireNonNull(clientSaslConfig);
     }
 
     public Set<Type> clusterTypes() {
@@ -178,6 +187,39 @@ public class ClusterConfig {
         return Optional.ofNullable(containerImage);
     }
 
+    /**
+     * Extra environment variables applied to every container node, on top of the cluster's own
+     * computed configuration. Populated programmatically (e.g. from a {@code @ClusterTemplate}
+     * generator method), since values such as a generated TLS keystore location/password aren't
+     * expressible as static annotation attributes.
+     */
+    public Map<String, String> extraEnv() {
+        return extraEnv;
+    }
+
+    /**
+     * Files to copy into every container node before it starts, keyed by absolute container path.
+     * See {@link #extraEnv()} for why this is programmatic rather than annotation-driven.
+     */
+    public Map<String, byte[]> filesToMount() {
+        return filesToMount;
+    }
+
+    /**
+     * Client-side SSL configuration (e.g. {@code ssl.truststore.location}) to merge into a
+     * container-based cluster's {@code ClusterInstance.setClientSslConfig}. Populated
+     * programmatically alongside {@link #filesToMount()} so the client trusts the same
+     * generated CA that was mounted into the broker containers.
+     */
+    public Map<String, Object> clientSslConfig() {
+        return clientSslConfig;
+    }
+
+    /** Client-side SASL configuration, analogous to {@link #clientSslConfig()}. */
+    public Map<String, Object> clientSaslConfig() {
+        return clientSaslConfig;
+    }
+
     public Set<String> displayTags() {
         Set<String> displayTags = new LinkedHashSet<>(tags);
         displayTags.add("MetadataVersion=" + metadataVersion);
@@ -233,7 +275,11 @@ public class ClusterConfig {
                 .setTags(clusterConfig.tags)
                 .setFeatures(clusterConfig.features)
                 .setStandalone(clusterConfig.standalone)
-                .setContainerImage(clusterConfig.containerImage);
+                .setContainerImage(clusterConfig.containerImage)
+                .setExtraEnv(clusterConfig.extraEnv)
+                .setFilesToMount(clusterConfig.filesToMount)
+                .setClientSslConfig(clusterConfig.clientSslConfig)
+                .setClientSaslConfig(clusterConfig.clientSaslConfig);
     }
 
     public static class Builder {
@@ -256,6 +302,10 @@ public class ClusterConfig {
         private Map<Feature, Short> features = Map.of();
         private boolean standalone = false;
         private String containerImage;
+        private Map<String, String> extraEnv = Map.of();
+        private Map<String, byte[]> filesToMount = Map.of();
+        private Map<String, Object> clientSslConfig = Map.of();
+        private Map<String, Object> clientSaslConfig = Map.of();
 
         private Builder() {}
 
@@ -356,6 +406,26 @@ public class ClusterConfig {
             return this;
         }
 
+        public Builder setExtraEnv(Map<String, String> extraEnv) {
+            this.extraEnv = Map.copyOf(extraEnv);
+            return this;
+        }
+
+        public Builder setFilesToMount(Map<String, byte[]> filesToMount) {
+            this.filesToMount = Map.copyOf(filesToMount);
+            return this;
+        }
+
+        public Builder setClientSslConfig(Map<String, Object> clientSslConfig) {
+            this.clientSslConfig = Map.copyOf(clientSslConfig);
+            return this;
+        }
+
+        public Builder setClientSaslConfig(Map<String, Object> clientSaslConfig) {
+            this.clientSaslConfig = Map.copyOf(clientSaslConfig);
+            return this;
+        }
+
         /**
          * Returns a shallow copy of this builder so that shared base settings
          * can be reused while varying individual fields (e.g., containerImage).
@@ -381,6 +451,10 @@ public class ClusterConfig {
             b.features = this.features;
             b.standalone = this.standalone;
             b.containerImage = this.containerImage;
+            b.extraEnv = this.extraEnv;
+            b.filesToMount = this.filesToMount;
+            b.clientSslConfig = this.clientSslConfig;
+            b.clientSaslConfig = this.clientSaslConfig;
             return b;
         }
 
@@ -388,7 +462,7 @@ public class ClusterConfig {
             return new ClusterConfig(types, executionModes, brokers, controllers, disksPerBroker, autoStart,
                     brokerSecurityProtocol, brokerListenerName, controllerSecurityProtocol, controllerListenerName,
                     trustStoreFile, metadataVersion, saslMechanism, serverProperties, perServerProperties, tags,
-                    features, standalone, containerImage);
+                    features, standalone, containerImage, extraEnv, filesToMount, clientSslConfig, clientSaslConfig);
         }
     }
 }

@@ -71,6 +71,12 @@ public class JaasUtils {
     public static final String KAFKA_PLAIN_ADMIN = "plain-admin";
     public static final String KAFKA_PLAIN_ADMIN_PASSWORD = "plain-admin-secret";
 
+    public static final String KAFKA_SCRAM_ADMIN = "scram-admin";
+    // 32 characters: comfortably over the 16-byte floor SCRAM's HMAC key derivation enforces
+    // under a FIPS-restricted Mac provider (shorter passwords fail Mac.init() there, though not
+    // on a stock JVM). See systemtests/PLAN-ubi-fips.md Part C1/C2.
+    public static final String KAFKA_SCRAM_ADMIN_PASSWORD = "scram-admin-secret-32-characters";
+
     public static File writeJaasContextsToFile(Set<JaasSection> jaasSections) throws IOException {
         File jaasFile = org.apache.kafka.test.TestUtils.tempFile();
         try (FileOutputStream fileStream = new FileOutputStream(jaasFile);

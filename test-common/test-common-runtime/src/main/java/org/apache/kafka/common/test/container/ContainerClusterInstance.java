@@ -39,6 +39,7 @@ import org.testcontainers.containers.GenericContainer;
 
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -69,6 +70,8 @@ public class ContainerClusterInstance implements ClusterInstance {
             .securityProtocol(clusterConfig.brokerSecurityProtocol())
             .saslMechanism(clusterConfig.saslMechanism())
             .serverProperties(clusterConfig.serverProperties())
+            .extraEnv(clusterConfig.extraEnv())
+            .filesToMount(clusterConfig.filesToMount())
             .build();
         this.cluster = new KafkaContainerCluster(
             clusterConfig.numBrokers(),
@@ -201,11 +204,18 @@ public class ContainerClusterInstance implements ClusterInstance {
 
     @Override
     public Map<String, Object> setClientSaslConfig(Map<String, Object> configs) {
-        if (clusterConfig.brokerSecurityProtocol() == SecurityProtocol.PLAINTEXT) {
+        SecurityProtocol protocol = clusterConfig.brokerSecurityProtocol();
+        if (protocol != SecurityProtocol.SASL_PLAINTEXT && protocol != SecurityProtocol.SASL_SSL) {
             return configs;
         }
+        if (!clusterConfig.clientSaslConfig().isEmpty()) {
+            Map<String, Object> merged = new HashMap<>(configs);
+            merged.putAll(clusterConfig.clientSaslConfig());
+            return merged;
+        }
         throw new UnsupportedOperationException(
-            "SASL/SSL client configuration is not yet implemented for container-based clusters");
+            "SASL client configuration is not yet implemented for container-based clusters; "
+                + "populate ClusterConfig.clientSaslConfig(), e.g. from a @ClusterTemplate generator method");
     }
 
     @Override
@@ -239,11 +249,18 @@ public class ContainerClusterInstance implements ClusterInstance {
 
     @Override
     public Map<String, Object> setClientSslConfig(Map<String, Object> configs) {
-        if (clusterConfig.brokerSecurityProtocol() == SecurityProtocol.PLAINTEXT) {
+        SecurityProtocol protocol = clusterConfig.brokerSecurityProtocol();
+        if (protocol != SecurityProtocol.SSL && protocol != SecurityProtocol.SASL_SSL) {
             return configs;
         }
+        if (!clusterConfig.clientSslConfig().isEmpty()) {
+            Map<String, Object> merged = new HashMap<>(configs);
+            merged.putAll(clusterConfig.clientSslConfig());
+            return merged;
+        }
         throw new UnsupportedOperationException(
-            "SSL client configuration is not yet implemented for container-based clusters");
+            "SSL client configuration is not yet implemented for container-based clusters; "
+                + "populate ClusterConfig.clientSslConfig(), e.g. from a @ClusterTemplate generator method");
     }
 
     @Override

@@ -24,6 +24,7 @@ import org.testcontainers.images.builder.Transferable;
 import org.testcontainers.utility.DockerImageName;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 /**
  * A Kafka container node that injects the correct advertised listeners
@@ -32,11 +33,13 @@ import java.nio.charset.StandardCharsets;
 class KafkaNode extends GenericContainer<KafkaNode> {
     private final int nodeId;
     private final KafkaNodeRole role;
+    private final Map<String, byte[]> filesToMount;
 
-    KafkaNode(DockerImageName image, int nodeId, KafkaNodeRole role) {
+    KafkaNode(DockerImageName image, int nodeId, KafkaNodeRole role, Map<String, byte[]> filesToMount) {
         super(image);
         this.nodeId = nodeId;
         this.role = role;
+        this.filesToMount = filesToMount;
     }
 
     @Override
@@ -52,6 +55,14 @@ class KafkaNode extends GenericContainer<KafkaNode> {
     @Override
     protected void containerIsStarting(InspectContainerResponse containerInfo) {
         super.containerIsStarting(containerInfo);
+
+        // Copied here, rather than via withCopyToContainer() at container-creation time, so
+        // these files are guaranteed to land before the STARTER_SCRIPT below unblocks the
+        // container's polling entrypoint (see KafkaContainerCluster for why the ordering matters
+        // on some container runtimes).
+        for (Map.Entry<String, byte[]> file : filesToMount.entrySet()) {
+            copyFileToContainer(Transferable.of(file.getValue(), 0644), file.getKey());
+        }
 
         StringBuilder script = new StringBuilder("#!/bin/bash\n");
         if (role.isBroker()) {

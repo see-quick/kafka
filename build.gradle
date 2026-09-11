@@ -1794,11 +1794,13 @@ project(':systemtests') {
     implementation project(':test-common:test-common-runtime')
 
     testImplementation project(':clients')
+    testImplementation testFixtures(project(':clients'))
     testImplementation project(':test-common:test-common-internal-api')
     testImplementation project(':test-common:test-common-runtime')
     testImplementation libs.junitJupiter
     testImplementation libs.testcontainers
     testImplementation libs.slf4jApi
+    testImplementation libs.bcpkix
     testImplementation testLog4j2Libs
 
     testRuntimeOnly runtimeTestLibs
@@ -1824,9 +1826,29 @@ project(':systemtests') {
       displayGranularity = 0
     }
 
+    // Opt-in only: real-FIPS tests (@Tag("fips")) require the host itself to be running in FIPS
+    // mode (checked at runtime by FipsExecutionCondition; there is no simulation), so they're
+    // excluded from the default run and only collected when explicitly requested.
+    // Usage, on a genuinely FIPS-mode host: ./gradlew :systemtests:systemTest \
+    //          -PkafkaSystemtestsFips=true -PkafkaSystemtestsFipsImage=kafka-systemtest:ubi-local
+    def fipsEnabled = project.hasProperty('kafkaSystemtestsFips') && kafkaSystemtestsFips.toBoolean()
+    if (project.hasProperty('kafkaSystemtestsFipsImage')) {
+      systemProperty 'kafka.systemtests.fips.image', kafkaSystemtestsFipsImage
+    }
+
     useJUnitPlatform {
       includeTags "system"
+      if (!fipsEnabled) {
+        excludeTags "fips"
+      }
       includeEngines 'junit-jupiter'
+    }
+
+    // Forces every container-based system test onto a single image (e.g. a locally built
+    // UBI-based image), collapsing per-test image matrices. Cross-version tests opt out via
+    // @ClusterSystemTest(respectImageOverride = false).
+    if (project.hasProperty('kafkaContainerImage')) {
+      systemProperty 'kafka.container.image.override', kafkaContainerImage
     }
 
     develocity {
@@ -1834,6 +1856,30 @@ project(':systemtests') {
         maxRetries = userMaxTestRetries
         maxFailures = userMaxTestRetryFailures
       }
+    }
+  }
+
+  // Opt-in only: builds a local Kafka Docker image from this checkout for use with
+  // systemTest -PkafkaContainerImage=<name:tag>. Not part of build/check.
+  // Usage: ./gradlew :systemtests:buildSystemTestImage \
+  //          -PsystemTestImage=kafka-systemtest:ubi-local -PsystemTestImageType=jvm-ubi
+  task buildSystemTestImage(type: Exec) {
+    group = 'Docker'
+    description = 'Builds a local Kafka Docker image (default jvm-ubi) from this checkout\'s releaseTarGz'
+    dependsOn ':core:releaseTarGz'
+
+    doFirst {
+      String image = project.hasProperty('systemTestImage') ? systemTestImage : 'kafka-systemtest:ubi-local'
+      String imageType = project.hasProperty('systemTestImageType') ? systemTestImageType : 'jvm-ubi'
+      List<String> parts = image.tokenize(':')
+      String imageName = parts[0]
+      String imageTag = parts.size() > 1 ? parts[1] : 'latest'
+      File kafkaArchive = project(':core').tasks.releaseTarGz.archiveFile.get().asFile
+
+      workingDir "$rootDir/docker"
+      commandLine 'python3', 'docker_build_test.py', imageName,
+          '--image-tag', imageTag, '--image-type', imageType, '--build',
+          '--kafka-archive', kafkaArchive.absolutePath
     }
   }
 

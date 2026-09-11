@@ -33,11 +33,27 @@ public final class KafkaNodeConfig {
     private final SecurityProtocol securityProtocol;
     private final String saslMechanism;
     private final Map<String, String> serverProperties;
+    private final Map<String, String> extraEnv;
+    private final Map<Integer, Map<String, String>> perNodeExtraEnv;
+    private final Map<String, byte[]> filesToMount;
+    private final Map<Integer, Map<String, byte[]>> perNodeFilesToMount;
 
     private KafkaNodeConfig(Builder builder) {
         this.securityProtocol = builder.securityProtocol;
         this.saslMechanism = builder.saslMechanism;
         this.serverProperties = Collections.unmodifiableMap(new HashMap<>(builder.serverProperties));
+        this.extraEnv = Collections.unmodifiableMap(new HashMap<>(builder.extraEnv));
+        this.perNodeExtraEnv = deepCopy(builder.perNodeExtraEnv);
+        this.filesToMount = Collections.unmodifiableMap(new HashMap<>(builder.filesToMount));
+        this.perNodeFilesToMount = deepCopy(builder.perNodeFilesToMount);
+    }
+
+    private static <V> Map<Integer, Map<String, V>> deepCopy(Map<Integer, Map<String, V>> source) {
+        Map<Integer, Map<String, V>> copy = new HashMap<>();
+        for (Map.Entry<Integer, Map<String, V>> entry : source.entrySet()) {
+            copy.put(entry.getKey(), Collections.unmodifiableMap(new HashMap<>(entry.getValue())));
+        }
+        return Collections.unmodifiableMap(copy);
     }
 
     public SecurityProtocol securityProtocol() {
@@ -52,6 +68,40 @@ public final class KafkaNodeConfig {
         return serverProperties;
     }
 
+    /**
+     * Extra environment variables (e.g. {@code KAFKA_SSL_KEYSTORE_LOCATION}) applied to every
+     * node, then overridden per node by {@link #extraEnvForNode(int)}. Applied after the
+     * cluster's own computed configuration, so these can override defaults such as the
+     * PLAINTEXT-only internal/controller listener protocol map.
+     */
+    public Map<String, String> extraEnv() {
+        return extraEnv;
+    }
+
+    /** {@link #extraEnv()} merged with any overrides/additions specific to {@code nodeId}. */
+    public Map<String, String> extraEnvForNode(int nodeId) {
+        Map<String, String> merged = new HashMap<>(extraEnv);
+        merged.putAll(perNodeExtraEnv.getOrDefault(nodeId, Map.of()));
+        return merged;
+    }
+
+    /**
+     * Files to copy into every node's container before it starts, keyed by absolute container
+     * path (e.g. under {@code /etc/kafka/secrets/}, which is writable by the image's non-root
+     * user). Merged with {@link #filesToMountForNode(int)} for node-specific files such as a
+     * per-broker server keystore.
+     */
+    public Map<String, byte[]> filesToMount() {
+        return filesToMount;
+    }
+
+    /** {@link #filesToMount()} merged with any files specific to {@code nodeId}. */
+    public Map<String, byte[]> filesToMountForNode(int nodeId) {
+        Map<String, byte[]> merged = new HashMap<>(filesToMount);
+        merged.putAll(perNodeFilesToMount.getOrDefault(nodeId, Map.of()));
+        return merged;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -60,6 +110,10 @@ public final class KafkaNodeConfig {
         private SecurityProtocol securityProtocol = SecurityProtocol.PLAINTEXT;
         private String saslMechanism = null;
         private Map<String, String> serverProperties = new HashMap<>();
+        private Map<String, String> extraEnv = new HashMap<>();
+        private Map<Integer, Map<String, String>> perNodeExtraEnv = new HashMap<>();
+        private Map<String, byte[]> filesToMount = new HashMap<>();
+        private Map<Integer, Map<String, byte[]>> perNodeFilesToMount = new HashMap<>();
 
         private Builder() {
         }
@@ -76,6 +130,26 @@ public final class KafkaNodeConfig {
 
         public Builder serverProperties(Map<String, String> serverProperties) {
             this.serverProperties = new HashMap<>(serverProperties);
+            return this;
+        }
+
+        public Builder extraEnv(Map<String, String> extraEnv) {
+            this.extraEnv = new HashMap<>(extraEnv);
+            return this;
+        }
+
+        public Builder putExtraEnvForNode(int nodeId, String key, String value) {
+            this.perNodeExtraEnv.computeIfAbsent(nodeId, k -> new HashMap<>()).put(key, value);
+            return this;
+        }
+
+        public Builder filesToMount(Map<String, byte[]> filesToMount) {
+            this.filesToMount = new HashMap<>(filesToMount);
+            return this;
+        }
+
+        public Builder putFileToMountForNode(int nodeId, String containerPath, byte[] content) {
+            this.perNodeFilesToMount.computeIfAbsent(nodeId, k -> new HashMap<>()).put(containerPath, content);
             return this;
         }
 

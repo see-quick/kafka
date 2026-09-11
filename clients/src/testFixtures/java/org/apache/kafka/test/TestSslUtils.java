@@ -424,6 +424,23 @@ public class TestSslUtils {
             return this;
         }
 
+        /**
+         * Like {@link #sanDnsNames(String...)} and {@link #sanIpAddress(InetAddress)}, but combined into a
+         * single subject alternative name extension so a certificate can be validated by either a DNS name
+         * (e.g. a container network alias) or an IP literal (e.g. {@code 127.0.0.1}).
+         */
+        public CertificateBuilder sanNames(String[] hostNames, InetAddress[] hostAddresses) throws IOException {
+            List<GeneralName> names = new ArrayList<>();
+            for (String hostName : hostNames) {
+                names.add(new GeneralName(GeneralName.dNSName, hostName));
+            }
+            for (InetAddress hostAddress : hostAddresses) {
+                names.add(new GeneralName(GeneralName.iPAddress, new DEROctetString(hostAddress.getAddress())));
+            }
+            subjectAltName = GeneralNames.getInstance(new DERSequence(names.toArray(new GeneralName[0]))).getEncoded();
+            return this;
+        }
+
         public X509Certificate generate(String dn, KeyPair keyPair) throws CertificateException {
             return generate(new X500Name(dn), keyPair);
         }

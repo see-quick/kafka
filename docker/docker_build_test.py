@@ -42,14 +42,20 @@ from common import execute, build_docker_image_runner
 import tempfile
 import os
 
-def run_docker_tests(image, tag, kafka_url, image_type):
+def run_docker_tests(image, tag, kafka_url, kafka_archive, image_type):
     temp_dir_path = tempfile.mkdtemp()
     try:
         current_dir = os.path.dirname(os.path.realpath(__file__))
         shutil.copytree(f"{current_dir}/test/fixtures", f"{temp_dir_path}/fixtures", dirs_exist_ok=True)
-        execute(["wget", "-nv", "-O", f"{temp_dir_path}/kafka.tgz", kafka_url])
         execute(["mkdir", f"{temp_dir_path}/fixtures/kafka"])
-        execute(["tar", "xfz", f"{temp_dir_path}/kafka.tgz", "-C", f"{temp_dir_path}/fixtures/kafka", "--strip-components", "1"])
+        if kafka_archive:
+            # --test can be combined with --kafka-archive alone (no --build), so extract
+            # the client binaries from the local archive instead of downloading kafka_url,
+            # which is None in that case.
+            execute(["tar", "xfz", kafka_archive, "-C", f"{temp_dir_path}/fixtures/kafka", "--strip-components", "1"])
+        else:
+            execute(["wget", "-nv", "-O", f"{temp_dir_path}/kafka.tgz", kafka_url])
+            execute(["tar", "xfz", f"{temp_dir_path}/kafka.tgz", "-C", f"{temp_dir_path}/fixtures/kafka", "--strip-components", "1"])
         failure_count = run_tests(f"{image}:{tag}", image_type, temp_dir_path)
     except:
         raise SystemError("Failed to run the tests")
@@ -65,7 +71,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("image", help="Image name that you want to keep for the Docker image")
     parser.add_argument("--image-tag", "-tag", default="latest", dest="tag", help="Image tag that you want to add to the image")
-    parser.add_argument("--image-type", "-type", choices=["jvm", "native"], default="jvm", dest="image_type", help="Image type you want to build")
+    parser.add_argument("--image-type", "-type", choices=["jvm", "jvm-ubi", "native"], default="jvm", dest="image_type", help="Image type you want to build")
     parser.add_argument("--build", "-b", action="store_true", dest="build_only", default=False, help="Only build the image, don't run tests")
     parser.add_argument("--test", "-t", action="store_true", dest="test_only", default=False, help="Only run the tests, don't build the image")
 
@@ -79,7 +85,9 @@ if __name__ == '__main__':
         if args.kafka_url:
             build_docker_image_runner(f"docker build -f $DOCKER_FILE -t {args.image}:{args.tag} --build-arg kafka_url={args.kafka_url} --build-arg build_date={date.today()} --no-cache --progress=plain $DOCKER_DIR", args.image_type)
         elif args.kafka_archive:
-            build_docker_image_runner(f"docker build -f $DOCKER_FILE -t {args.image}:{args.tag} --build-arg build_date={date.today()} --no-cache --progress=plain $DOCKER_DIR", args.image_type, args.kafka_archive)
+            # kafka_url is explicitly set to empty (rather than left unset) so the ARG is
+            # defined in Dockerfiles that check it under `set -u`, e.g. jvm-ubi's `[ -n "$kafka_url" ]`.
+            build_docker_image_runner(f"docker build -f $DOCKER_FILE -t {args.image}:{args.tag} --build-arg kafka_url= --build-arg build_date={date.today()} --no-cache --progress=plain $DOCKER_DIR", args.image_type, args.kafka_archive)
     
     if args.test_only or not (args.build_only or args.test_only):
-        run_docker_tests(args.image, args.tag, args.kafka_url, args.image_type)
+        run_docker_tests(args.image, args.tag, args.kafka_url, args.kafka_archive, args.image_type)

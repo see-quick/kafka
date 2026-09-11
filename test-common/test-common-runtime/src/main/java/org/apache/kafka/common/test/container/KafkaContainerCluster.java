@@ -118,8 +118,12 @@ public class KafkaContainerCluster implements AutoCloseable {
         for (int nodeId = 0; nodeId < totalNodes; nodeId++) {
             KafkaNodeRole role = getNodeRole(nodeId);
             Map<String, String> config = buildNodeConfig(nodeId, role, quorumVoters);
+            // Applied after the cluster's own computed defaults (e.g. the PLAINTEXT-only
+            // internal/controller protocol map) so callers can override them, for example to
+            // configure ssl.* properties for the external listener.
+            config.putAll(nodeConfig.extraEnvForNode(nodeId));
 
-            KafkaNode container = new KafkaNode(imageName, nodeId, role);
+            KafkaNode container = new KafkaNode(imageName, nodeId, role, nodeConfig.filesToMountForNode(nodeId));
 
             container
                 .withNetwork(network)
@@ -212,7 +216,10 @@ public class KafkaContainerCluster implements AutoCloseable {
                     + "user_" + JaasUtils.KAFKA_PLAIN_USER1 + "=\"" + JaasUtils.KAFKA_PLAIN_USER1_PASSWORD + "\";";
                 config.put("KAFKA_LISTENER_NAME_" + Listener.EXTERNAL + "_PLAIN_SASL_JAAS_CONFIG", jaasConfig);
             } else if (saslMechanism != null && saslMechanism.startsWith("SCRAM-")) {
-                String envMechanism = saslMechanism.replace("-", "__");
+                // KafkaDockerWrapper.getServerConfigsFromEnv converts "_" -> "." then "..." -> "-"
+                // then ".." -> "_", so a literal hyphen in the resulting property name (as in
+                // "scram-sha-512") must be encoded as three underscores here, not two.
+                String envMechanism = saslMechanism.replace("-", "___");
                 String jaasConfig = "org.apache.kafka.common.security.scram.ScramLoginModule required;";
                 config.put("KAFKA_LISTENER_NAME_" + Listener.EXTERNAL + "_" + envMechanism + "_SASL_JAAS_CONFIG", jaasConfig);
             }
@@ -291,8 +298,7 @@ public class KafkaContainerCluster implements AutoCloseable {
             .findFirst()
             .orElseThrow(() -> new RuntimeException("No broker container found"));
 
-        createScramUser(brokerContainer, JaasUtils.KAFKA_PLAIN_ADMIN, JaasUtils.KAFKA_PLAIN_ADMIN_PASSWORD);
-        createScramUser(brokerContainer, JaasUtils.KAFKA_PLAIN_USER1, JaasUtils.KAFKA_PLAIN_USER1_PASSWORD);
+        createScramUser(brokerContainer, JaasUtils.KAFKA_SCRAM_ADMIN, JaasUtils.KAFKA_SCRAM_ADMIN_PASSWORD);
     }
 
     private void createScramUser(GenericContainer<?> container, String username, String password) {
@@ -301,7 +307,10 @@ public class KafkaContainerCluster implements AutoCloseable {
                 "/opt/kafka/bin/kafka-configs.sh",
                 "--bootstrap-server", "localhost:" + INTERNAL_PORT,
                 "--alter",
-                "--add-config", nodeConfig.saslMechanism() + "=[password=" + password + ",iterations=4096]",
+                // ConfigCommand's SCRAM value regex is "(?:iterations=N,)?password=(.*)" with a
+                // greedy password group, so iterations MUST precede password here — reversing the
+                // order silently stores "<password>,iterations=4096" as the password instead.
+                "--add-config", nodeConfig.saslMechanism() + "=[iterations=4096,password=" + password + "]",
                 "--entity-type", "users",
                 "--entity-name", username
             );

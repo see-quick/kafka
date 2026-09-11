@@ -48,7 +48,8 @@ public class CrossVersionST {
     @Timeout(120)
     @ClusterSystemTest(
         types = {Type.KRAFT, Type.CO_KRAFT},
-        containerImageSource = "crossVersionImages"
+        containerImageSource = "crossVersionImages",
+        respectImageOverride = false
     )
     void testProduceConsume(ClusterInstance cluster) throws InterruptedException {
         String version = cluster.config().containerImage().orElse("unknown");

@@ -104,6 +104,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class ClusterTestExtensions implements TestTemplateInvocationContextProvider, BeforeEachCallback, AfterEachCallback {
     public static final String CLUSTER_TEST_REPEAT_SYSTEM_PROP = "kafka.cluster.test.repeat";
 
+    /**
+     * When set, forces every {@link ClusterSystemTest} (that has not opted out via
+     * {@link ClusterSystemTest#respectImageOverride()}) onto this single container image,
+     * collapsing any per-test image matrix down to one invocation.
+     */
+    public static final String CONTAINER_IMAGE_OVERRIDE_PROP = "kafka.container.image.override";
+
     private static final String METRICS_METER_TICK_THREAD_PREFIX = "metrics-meter-tick-thread";
     private static final String SCALA_THREAD_PREFIX = "scala-";
     private static final String FORK_JOIN_POOL_THREAD_PREFIX = "ForkJoinPool";
@@ -181,7 +188,8 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
         // Process single @ClusterSystemTest annotation
         ClusterSystemTest clusterSystemTestAnnot = context.getRequiredTestMethod().getDeclaredAnnotation(ClusterSystemTest.class);
         if (clusterSystemTestAnnot != null) {
-            String[] images = resolveContainerImages(context, clusterSystemTestAnnot.containerImages(), clusterSystemTestAnnot.containerImageSource());
+            String[] images = resolveContainerImages(context, clusterSystemTestAnnot.containerImages(),
+                clusterSystemTestAnnot.containerImageSource(), clusterSystemTestAnnot.respectImageOverride());
             generatedContexts.addAll(processClusterTestConfigs(context,
                 new ClusterTestConfig[]{ClusterTestConfig.from(clusterSystemTestAnnot)},
                 new String[][]{images}, defaults));
@@ -195,7 +203,7 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
                 .map(ClusterTestConfig::from)
                 .toArray(ClusterTestConfig[]::new);
             String[][] images = Arrays.stream(annots)
-                .map(a -> resolveContainerImages(context, a.containerImages(), a.containerImageSource()))
+                .map(a -> resolveContainerImages(context, a.containerImages(), a.containerImageSource(), a.respectImageOverride()))
                 .toArray(String[][]::new);
             generatedContexts.addAll(processClusterTestConfigs(context, configs, images, defaults));
         }
@@ -365,7 +373,14 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
     }
 
     @SuppressWarnings("unchecked")
-    private String[] resolveContainerImages(ExtensionContext context, String[] literalImages, String source) {
+    private String[] resolveContainerImages(ExtensionContext context, String[] literalImages, String source, boolean respectImageOverride) {
+        if (respectImageOverride) {
+            String override = System.getProperty(CONTAINER_IMAGE_OVERRIDE_PROP);
+            if (override != null && !override.isEmpty()) {
+                return new String[] {override};
+            }
+        }
+
         if (source.isEmpty()) {
             return literalImages;
         }
