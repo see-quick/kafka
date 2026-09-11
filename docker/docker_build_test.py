@@ -37,12 +37,15 @@ Usage:
 from datetime import date
 import argparse
 import shutil
-from test.docker_sanity_test import run_tests
 from common import execute, build_docker_image_runner
 import tempfile
 import os
 
 def run_docker_tests(image, tag, kafka_url, kafka_archive, image_type):
+    # Imported lazily so that a build-only run (-b/--build) doesn't require the sanity test's
+    # dependencies (requests, HTMLTestRunner) to be installed.
+    from test.docker_sanity_test import run_tests
+
     temp_dir_path = tempfile.mkdtemp()
     try:
         current_dir = os.path.dirname(os.path.realpath(__file__))
