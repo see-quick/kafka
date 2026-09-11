@@ -39,6 +39,9 @@ import org.testcontainers.images.builder.Transferable;
 import org.testcontainers.utility.DockerImageName;
 
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -106,8 +109,69 @@ public class FipsSt {
     }
 
     /**
-     * The test that would have caught KAFKA-20997 at the system level — a PKCS12 TLS cluster
-     * booting and serving traffic on a genuinely FIPS-mode host.
+     * A broker whose keystore and truststore are PEM, under FIPS. Unlike the PKCS12 configuration
+     * above, this is the one that actually exercises KAFKA-20997: {@code PemStore}'s static
+     * {@code KEY_FACTORIES} field eagerly builds an RSA, a DSA and an EC {@code KeyFactory}, and
+     * the DSA one is unavailable under Red Hat's FIPS providers, so the class initializer fails
+     * and every PEM store breaks — RSA-only ones included. A PKCS12 broker never loads the class,
+     * which is why {@link #generateFipsSslConfigs()} passes with or without the fix.
+     *
+     * <p>The client deliberately uses a PKCS12 truststore rather than PEM, so a failure is
+     * unambiguously the broker's PEM path inside the FIPS container rather than the test JVM's own
+     * client-side PEM parsing (whose FIPS state depends on which JDK build runs the tests).
+     */
+    static List<ClusterConfig> generateFipsPemConfigs() throws Exception {
+        TlsFixture tls = TlsFixture.generate();
+
+        // Covers both isolated KRAFT (kafka-0=controller, kafka-1=broker) and combined CO_KRAFT
+        // (kafka-0=both), since either id could end up being the broker.
+        byte[] serverPem = tls.serverKeyStorePem("kafka-0", "kafka-1", "localhost");
+        String caPem = tls.caCertificatePem();
+
+        String keyStorePath = "/etc/kafka/secrets/kafka.server.keystore.pem";
+        String trustStorePath = "/etc/kafka/secrets/kafka.server.truststore.pem";
+
+        Map<String, byte[]> filesToMount = Map.of(
+            keyStorePath, serverPem,
+            trustStorePath, caPem.getBytes(StandardCharsets.UTF_8));
+
+        // PEM format carries no store password: DefaultSslEngineFactory rejects one if set.
+        Map<String, String> extraEnv = new HashMap<>();
+        extraEnv.put("KAFKA_SSL_KEYSTORE_LOCATION", keyStorePath);
+        extraEnv.put("KAFKA_SSL_KEYSTORE_TYPE", "PEM");
+        extraEnv.put("KAFKA_SSL_TRUSTSTORE_LOCATION", trustStorePath);
+        extraEnv.put("KAFKA_SSL_TRUSTSTORE_TYPE", "PEM");
+        extraEnv.put("KAFKA_SSL_CLIENT_AUTH", "none");
+
+        Path clientTrustStore = Files.createTempFile("fips-client-truststore", ".p12");
+        clientTrustStore.toFile().deleteOnExit();
+        Files.write(clientTrustStore, tls.trustStoreBytes(TlsFixture.STORE_TYPE_PKCS12));
+
+        Map<String, Object> clientSslConfig = Map.of(
+            CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SSL.name,
+            SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG, TlsFixture.STORE_TYPE_PKCS12,
+            SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, clientTrustStore.toString(),
+            SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, new String(TlsFixture.STORE_PASSWORD));
+
+        ClusterConfig config = ClusterConfig.defaultBuilder()
+            .setExecutionModes(Set.of(ExecutionMode.CONTAINER))
+            .setBrokers(1)
+            .setControllers(1)
+            .setBrokerSecurityProtocol(SecurityProtocol.SSL)
+            .setContainerImage(FipsFixture.imageTag())
+            .setExtraEnv(extraEnv)
+            .setFilesToMount(filesToMount)
+            .setClientSslConfig(clientSslConfig)
+            .build();
+
+        return List.of(config);
+    }
+
+    /**
+     * A PKCS12 TLS cluster booting and serving traffic on a genuinely FIPS-mode host. PKCS12
+     * keystores remain available under Red Hat's FIPS providers, so this is a baseline that the
+     * common TLS path still works — it does <em>not</em> cover KAFKA-20997, which only fires for
+     * PEM stores; see {@link #testProduceConsumeOverPemTlsUnderFips(ClusterInstance)} for that.
      */
     @Tag("system")
     @Tag("fips")
@@ -119,6 +183,32 @@ public class FipsSt {
 
         try (Admin admin = cluster.admin()) {
             assertFalse(admin.describeCluster().nodes().get().isEmpty(), "Should describe cluster over TLS under FIPS");
+        }
+
+        ClientUtils.produceMessages(cluster, topicName, NUM_MESSAGES);
+        List<ConsumerRecord<String, String>> records = ClientUtils.consumeMessages(
+            cluster, topicName, 1, NUM_MESSAGES, 30_000L);
+
+        assertEquals(NUM_MESSAGES, records.size());
+    }
+
+    /**
+     * The test that would have caught KAFKA-20997 at the system level: a broker with PEM
+     * keystore/truststore booting and serving traffic under FIPS. Without the fix, the broker
+     * fails to start because {@code PemStore}'s class initializer cannot build a DSA
+     * {@code KeyFactory}, so this fails at cluster startup rather than at produce/consume.
+     */
+    @Tag("system")
+    @Tag("fips")
+    @Timeout(180)
+    @ClusterTemplate("generateFipsPemConfigs")
+    void testProduceConsumeOverPemTlsUnderFips(ClusterInstance cluster) throws Exception {
+        String topicName = "fips-pem-tls-test-topic";
+        cluster.createTopic(topicName, 1, (short) 1);
+
+        try (Admin admin = cluster.admin()) {
+            assertFalse(admin.describeCluster().nodes().get().isEmpty(),
+                "Should describe cluster over PEM TLS under FIPS");
         }
 
         ClientUtils.produceMessages(cluster, topicName, NUM_MESSAGES);
