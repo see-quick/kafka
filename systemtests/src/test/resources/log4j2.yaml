@@ -39,3 +39,9 @@ Configuration:
 
       - name: kafka-container
         level: DEBUG
+
+      # Without this, the root level of OFF swallows DockerClientProviderStrategy's report of
+      # which container-runtime strategies it tried and why each failed, leaving "Could not find
+      # a valid Docker environment" with no explanation.
+      - name: org.testcontainers
+        level: INFO
