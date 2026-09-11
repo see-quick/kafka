@@ -35,10 +35,6 @@ import java.nio.file.Path;
  */
 public final class FipsFixture {
 
-    /** Image tag to run FIPS tests against; must be UBI-based to exercise Red Hat's FIPS provider. */
-    public static final String FIPS_IMAGE_PROPERTY = "kafka.systemtests.fips.image";
-    public static final String DEFAULT_FIPS_IMAGE = "kafka-systemtest:ubi-local";
-
     private static final Path PROC_FIPS_ENABLED_PATH = Path.of("/proc/sys/crypto/fips_enabled");
 
     private FipsFixture() {
@@ -51,9 +47,5 @@ public final class FipsFixture {
         } catch (Exception e) {
             return false;
         }
-    }
-
-    public static String imageTag() {
-        return System.getProperty(FIPS_IMAGE_PROPERTY, DEFAULT_FIPS_IMAGE);
     }
 }

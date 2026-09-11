@@ -22,6 +22,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.test.ClusterInstance;
 import org.apache.kafka.common.test.api.ClusterConfig;
 import org.apache.kafka.common.test.api.ClusterSystemTemplate;
+import org.apache.kafka.common.test.container.KafkaContainerCluster;
 import org.apache.kafka.systemtests.utils.ClientUtils;
 import org.apache.kafka.systemtests.utils.security.TlsCluster;
 
@@ -49,8 +50,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * in FIPS mode (that includes every macOS/Windows Docker Desktop or Podman machine setup, since
  * the container runtime there runs inside a non-FIPS Linux VM regardless of the host OS).
  *
- * <p>Requires a UBI image built beforehand, e.g.
- * {@code ./gradlew :systemtests:buildSystemTestImage -PsystemTestImage=kafka-systemtest:ubi-local -PsystemTestImageType=jvm-ubi}.
+ * <p>These tests pin no image of their own: like every other container system test they run on
+ * whatever {@code -PkafkaSystemTestsImage} selects, which for FIPS has to be an image whose JDK
+ * picks up the host's FIPS providers (a UBI one, say). Build one first, e.g.
+ * {@code ./gradlew :systemtests:buildSystemTestImage -PsystemTestImage=kafka-systemtest:ubi-local -PsystemTestImageType=jvm-ubi},
+ * then run with {@code -PkafkaSystemtestsFips=true -PkafkaSystemTestsImage=kafka-systemtest:ubi-local}.
+ * The build fails fast if the FIPS tier is requested without an image, since the default
+ * {@code apache/kafka:latest} would pass these tests for the wrong reason.
  */
 @ExtendWith(FipsExecutionCondition.class)
 public class FipsSt {
@@ -58,9 +64,7 @@ public class FipsSt {
     private static final int NUM_MESSAGES = 100;
 
     static List<ClusterConfig> generateFipsSslConfigs() throws Exception {
-        return List.of(TlsCluster.builder()
-            .containerImage(FipsFixture.imageTag())
-            .build());
+        return List.of(TlsCluster.builder().build());
     }
 
     /**
@@ -79,7 +83,6 @@ public class FipsSt {
         return List.of(TlsCluster.builder()
             .brokerStoreType(TlsCluster.StoreType.PEM)
             .clientTrustStoreType(TlsCluster.StoreType.PKCS12)
-            .containerImage(FipsFixture.imageTag())
             .build());
     }
 
@@ -152,7 +155,7 @@ public class FipsSt {
             probeBytes = in.readAllBytes();
         }
 
-        try (GenericContainer<?> container = new GenericContainer<>(DockerImageName.parse(FipsFixture.imageTag()))) {
+        try (GenericContainer<?> container = new GenericContainer<>(DockerImageName.parse(KafkaContainerCluster.defaultImage()))) {
             container.withCommand("sleep", "60");
             container.start();
             container.copyFileToContainer(Transferable.of(probeBytes), "/tmp/probe/" + probeRelativePath);

@@ -31,6 +31,7 @@ import org.apache.kafka.common.test.api.ClusterTests;
 import org.apache.kafka.common.test.api.DetectThreadLeak;
 import org.apache.kafka.common.test.api.ExecutionMode;
 import org.apache.kafka.common.test.api.Type;
+import org.apache.kafka.common.test.container.KafkaContainerCluster;
 import org.apache.kafka.server.common.Feature;
 import org.apache.kafka.server.util.timer.SystemTimer;
 
@@ -107,13 +108,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class ClusterTestExtensions implements TestTemplateInvocationContextProvider, BeforeEachCallback, AfterEachCallback {
     public static final String CLUSTER_TEST_REPEAT_SYSTEM_PROP = "kafka.cluster.test.repeat";
-
-    /**
-     * When set, forces every {@link ClusterSystemTest} (that has not opted out via
-     * {@link ClusterSystemTest#respectImageOverride()}) onto this single container image,
-     * collapsing any per-test image matrix down to one invocation.
-     */
-    public static final String CONTAINER_IMAGE_OVERRIDE_PROP = "kafka.container.image.override";
 
     private static final String METRICS_METER_TICK_THREAD_PREFIX = "metrics-meter-tick-thread";
     private static final String SCALA_THREAD_PREFIX = "scala-";
@@ -306,7 +300,33 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
     ) {
         Object testInstance = context.getTestInstance().orElse(null);
         Method method = ReflectionUtils.getRequiredMethod(context.getRequiredTestClass(), generateClustersMethods);
-        return (List<ClusterConfig>) ReflectionUtils.invokeMethod(method, testInstance);
+        List<ClusterConfig> configs = (List<ClusterConfig>) ReflectionUtils.invokeMethod(method, testInstance);
+        return configs.stream().map(ClusterTestExtensions::applyImageOverride).collect(Collectors.toList());
+    }
+
+    /**
+     * Returns the globally configured container image, or {@code null} when none is set.
+     *
+     * @see KafkaContainerCluster#IMAGE_PROPERTY
+     */
+    private static String imageOverride() {
+        String override = System.getProperty(KafkaContainerCluster.IMAGE_PROPERTY);
+        return override == null || override.isEmpty() ? null : override;
+    }
+
+    /**
+     * Points a generator-produced config at the globally configured image. Generators build their
+     * {@link ClusterConfig} at run time rather than declaring images in an annotation, so there is
+     * no {@link ClusterSystemTest#respectImageOverride()} equivalent to consult here: the override
+     * wins, the same way it does over {@code containerImages()} on the annotation. Only container
+     * executions are touched, since an in-memory cluster has no image.
+     */
+    private static ClusterConfig applyImageOverride(ClusterConfig config) {
+        String override = imageOverride();
+        if (override == null || !config.executionModes().contains(ExecutionMode.CONTAINER)) {
+            return config;
+        }
+        return ClusterConfig.builder(config).setContainerImage(override).build();
     }
 
     private List<TestTemplateInvocationContext> processClusterTestConfigs(
@@ -388,8 +408,8 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
     @SuppressWarnings("unchecked")
     private String[] resolveContainerImages(ExtensionContext context, String[] literalImages, String source, boolean respectImageOverride) {
         if (respectImageOverride) {
-            String override = System.getProperty(CONTAINER_IMAGE_OVERRIDE_PROP);
-            if (override != null && !override.isEmpty()) {
+            String override = imageOverride();
+            if (override != null) {
                 return new String[] {override};
             }
         }

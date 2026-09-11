@@ -1830,10 +1830,19 @@ project(':systemtests') {
     // mode (checked at runtime by FipsExecutionCondition; there is no simulation), so they're
     // excluded from the default run and only collected when explicitly requested.
     // Usage, on a genuinely FIPS-mode host: ./gradlew :systemtests:systemTest \
-    //          -PkafkaSystemtestsFips=true -PkafkaSystemtestsFipsImage=kafka-systemtest:ubi-local
+    //          -PkafkaSystemtestsFips=true -PkafkaSystemTestsImage=kafka-systemtest:ubi-local
     def fipsEnabled = project.hasProperty('kafkaSystemtestsFips') && kafkaSystemtestsFips.toBoolean()
-    if (project.hasProperty('kafkaSystemtestsFipsImage')) {
-      systemProperty 'kafka.systemtests.fips.image', kafkaSystemtestsFipsImage
+
+    // Selects the container image for every container-based system test, collapsing per-test image
+    // matrices onto one image. Cross-version tests opt out via
+    // @ClusterSystemTest(respectImageOverride = false). Defaults to apache/kafka:latest.
+    if (project.hasProperty('kafkaSystemTestsImage')) {
+      systemProperty 'kafka.systemtests.image', kafkaSystemTestsImage
+    } else if (fipsEnabled) {
+      // apache/kafka:latest is a Temurin/Alpine image that will not pick up the host's FIPS
+      // providers, so the FIPS tier would pass without proving anything. Fail rather than lie.
+      throw new GradleException('-PkafkaSystemtestsFips=true requires -PkafkaSystemTestsImage=<image> ' +
+          'pointing at a FIPS-capable image (e.g. one built with -PsystemTestImageType=jvm-ubi)')
     }
 
     useJUnitPlatform {
@@ -1842,13 +1851,6 @@ project(':systemtests') {
         excludeTags "fips"
       }
       includeEngines 'junit-jupiter'
-    }
-
-    // Forces every container-based system test onto a single image (e.g. a locally built
-    // UBI-based image), collapsing per-test image matrices. Cross-version tests opt out via
-    // @ClusterSystemTest(respectImageOverride = false).
-    if (project.hasProperty('kafkaContainerImage')) {
-      systemProperty 'kafka.container.image.override', kafkaContainerImage
     }
 
     develocity {
@@ -1860,7 +1862,7 @@ project(':systemtests') {
   }
 
   // Opt-in only: builds a local Kafka Docker image from this checkout for use with
-  // systemTest -PkafkaContainerImage=<name:tag>. Not part of build/check.
+  // systemTest -PkafkaSystemTestsImage=<name:tag>. Not part of build/check.
   // Usage: ./gradlew :systemtests:buildSystemTestImage \
   //          -PsystemTestImage=kafka-systemtest:ubi-local -PsystemTestImageType=jvm-ubi
   // The image type selects the Dockerfile (i.e. the package-manager family: jvm=apk,

@@ -66,8 +66,17 @@ import java.util.stream.Collectors;
 public class KafkaContainerCluster implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(KafkaContainerCluster.class);
 
-    private static final String DEFAULT_IMAGE = "apache/kafka:latest";
-    private static final String IMAGE_PROPERTY = "kafka.container.image";
+    public static final String DEFAULT_IMAGE = "apache/kafka:latest";
+
+    /**
+     * The single knob selecting which image container-based tests run on, e.g. a locally built
+     * UBI-based one. It applies to every such test rather than any particular flavour of them, so
+     * it is deliberately not scoped to a feature (FIPS, upgrades, ...). Tests that must pin a
+     * specific image do so through {@link org.apache.kafka.common.test.api.ClusterConfig}, and
+     * cross-version tests opt out of the override entirely via
+     * {@code @ClusterSystemTest(respectImageOverride = false)}.
+     */
+    public static final String IMAGE_PROPERTY = "kafka.systemtests.image";
     static final String STARTER_SCRIPT = "/tmp/start_kafka.sh";
     static final int KAFKA_PORT = 9092;
     private static final int CONTROLLER_PORT = 9093;
@@ -102,12 +111,18 @@ public class KafkaContainerCluster implements AutoCloseable {
         this.containers = new TreeMap<>();
         this.runningNodeIds = ConcurrentHashMap.newKeySet();
 
-        String imageTag = containerImage != null
-            ? containerImage
-            : System.getProperty(IMAGE_PROPERTY, DEFAULT_IMAGE);
-        this.imageName = DockerImageName.parse(imageTag);
+        this.imageName = DockerImageName.parse(containerImage != null ? containerImage : defaultImage());
 
         createContainers();
+    }
+
+    /**
+     * The image to use when nothing pins one explicitly. Tests that start a bare container of
+     * their own (rather than a whole cluster) should use this so they land on the same image as
+     * the rest of the run.
+     */
+    public static String defaultImage() {
+        return System.getProperty(IMAGE_PROPERTY, DEFAULT_IMAGE);
     }
 
     @SuppressWarnings("resource")

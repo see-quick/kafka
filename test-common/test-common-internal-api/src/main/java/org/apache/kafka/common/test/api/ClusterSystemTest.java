@@ -58,7 +58,7 @@ public @interface ClusterSystemTest {
     String containerImageSource() default "";
 
     /**
-     * Whether this test should honor the {@code kafka.container.image.override} system property.
+     * Whether this test should honor the {@code kafka.systemtests.image} system property.
      * Cross-version tests (which intentionally exercise multiple, specific image versions) should
      * set this to {@code false} so a global override cannot collapse them onto a single image.
      */
