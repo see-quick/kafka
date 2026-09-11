@@ -139,7 +139,9 @@ public class KafkaContainerCluster implements AutoCloseable {
             }
 
             container
-                .withLogConsumer(new Slf4jLogConsumer(LoggerFactory.getLogger("kafka-container-" + nodeId)))
+                // Dot-separated so log frameworks treat these as children of "kafka-container"
+                // and a single logger config covers every node.
+                .withLogConsumer(new Slf4jLogConsumer(LoggerFactory.getLogger("kafka-container." + nodeId)))
                 .withCommand("sh", "-c",
                     "while [ ! -f " + STARTER_SCRIPT + " ]; do sleep 0.1; done; " + STARTER_SCRIPT)
                 .waitingFor(Wait.forListeningPort()
@@ -263,6 +265,7 @@ public class KafkaContainerCluster implements AutoCloseable {
                 throw new RuntimeException("Interrupted while starting Kafka containers", e);
             } catch (ExecutionException | TimeoutException e) {
                 lastException = e;
+                logContainerOutput(attempt);
                 if (attempt < ContainerUtils.MAX_DOCKER_RETRIES) {
                     long backoff = ContainerUtils.DOCKER_RETRY_INITIAL_BACKOFF_MS * (1L << (attempt - 1));
                     LOG.warn("Failed to start Kafka containers (attempt {}/{}), retrying in {}ms",
@@ -349,6 +352,26 @@ public class KafkaContainerCluster implements AutoCloseable {
                 container.stop();
             } catch (Exception e) {
                 LOG.warn("Error stopping container", e);
+            }
+        }
+    }
+
+    /**
+     * Dumps whatever each container printed before a start attempt failed. Without this the
+     * reason a broker exited is lost: {@link #recreateContainers()} replaces the failed
+     * containers, so by the time {@link #collectLogs()} runs from {@link #stop()} it only sees
+     * containers that were never started and {@code getLogs()} has nothing to return.
+     */
+    private void logContainerOutput(int attempt) {
+        for (Map.Entry<Integer, GenericContainer<?>> entry : containers.entrySet()) {
+            int nodeId = entry.getKey();
+            try {
+                String logs = entry.getValue().getLogs();
+                if (!logs.isBlank()) {
+                    LOG.warn("Output of node {} after failed start attempt {}:{}{}", nodeId, attempt, System.lineSeparator(), logs);
+                }
+            } catch (Exception e) {
+                LOG.warn("Could not read output of node {} after failed start attempt {}: {}", nodeId, attempt, e.toString());
             }
         }
     }
