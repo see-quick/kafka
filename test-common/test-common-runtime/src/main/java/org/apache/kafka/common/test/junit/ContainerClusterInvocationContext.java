@@ -95,11 +95,23 @@ public class ContainerClusterInvocationContext implements TestTemplateInvocation
     private static final String SESSION_TIMESTAMP =
         LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss_SSS"));
 
+    /**
+     * Most filesystems cap a single path component at 255 bytes, and a templated display name
+     * carrying every cluster tag blows past that, so {@code createDirectories} fails and no logs
+     * are written at all. Keep a readable prefix and append a hash of the full name so distinct
+     * invocations still get distinct directories.
+     */
+    private static final int MAX_PATH_COMPONENT_LENGTH = 120;
+
     private Path buildLogDir(ExtensionContext context) {
         String className = context.getRequiredTestClass().getSimpleName();
         String methodName = context.getRequiredTestMethod().getName();
         String displayName = context.getDisplayName()
             .replaceAll("[^a-zA-Z0-9._-]", "_");
+        if (displayName.length() > MAX_PATH_COMPONENT_LENGTH) {
+            String suffix = "_" + Integer.toHexString(displayName.hashCode());
+            displayName = displayName.substring(0, MAX_PATH_COMPONENT_LENGTH - suffix.length()) + suffix;
+        }
         return Path.of("build", "test-logs", SESSION_TIMESTAMP, className, methodName,
             displayName, "attempt-" + attemptCounter.get());
     }
