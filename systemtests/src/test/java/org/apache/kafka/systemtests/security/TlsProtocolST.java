@@ -17,25 +17,16 @@
 
 package org.apache.kafka.systemtests.security;
 
-import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.config.SslConfigs;
-import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.common.test.ClusterInstance;
 import org.apache.kafka.common.test.api.ClusterConfig;
-import org.apache.kafka.common.test.api.ClusterTemplate;
-import org.apache.kafka.common.test.api.ExecutionMode;
+import org.apache.kafka.common.test.api.ClusterSystemTemplate;
 import org.apache.kafka.systemtests.utils.ClientUtils;
-import org.apache.kafka.systemtests.utils.security.TlsFixture;
-
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Timeout;
+import org.apache.kafka.systemtests.utils.security.TlsCluster;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -51,57 +42,18 @@ public class TlsProtocolST {
     static List<ClusterConfig> generateProtocolConfigs() throws Exception {
         List<ClusterConfig> configs = new ArrayList<>();
         for (String protocol : PROTOCOLS) {
-            configs.add(configFor(protocol));
+            configs.add(TlsCluster.builder()
+                .env("KAFKA_SSL_ENABLED_PROTOCOLS", protocol)
+                .env("KAFKA_SSL_PROTOCOL", protocol)
+                .clientConfig(SslConfigs.SSL_ENABLED_PROTOCOLS_CONFIG, List.of(protocol))
+                .clientConfig(SslConfigs.SSL_PROTOCOL_CONFIG, protocol)
+                .tag("tlsProtocol=" + protocol)
+                .build());
         }
         return configs;
     }
 
-    private static ClusterConfig configFor(String protocol) throws Exception {
-        TlsFixture tls = TlsFixture.generate();
-        byte[] serverKeyStore = tls.serverKeyStoreBytes(TlsFixture.STORE_TYPE_PKCS12, "kafka-0", "kafka-1", "localhost");
-        byte[] trustStore = tls.trustStoreBytes(TlsFixture.STORE_TYPE_PKCS12);
-        String password = new String(TlsFixture.STORE_PASSWORD);
-
-        String keyStorePath = "/etc/kafka/secrets/kafka.server.keystore.p12";
-        String trustStorePath = "/etc/kafka/secrets/kafka.server.truststore.p12";
-
-        Map<String, byte[]> filesToMount = Map.of(
-            keyStorePath, serverKeyStore,
-            trustStorePath, trustStore);
-
-        Map<String, String> extraEnv = new HashMap<>();
-        extraEnv.put("KAFKA_SSL_KEYSTORE_LOCATION", keyStorePath);
-        extraEnv.put("KAFKA_SSL_KEYSTORE_PASSWORD", password);
-        extraEnv.put("KAFKA_SSL_KEYSTORE_TYPE", TlsFixture.STORE_TYPE_PKCS12);
-        extraEnv.put("KAFKA_SSL_TRUSTSTORE_LOCATION", trustStorePath);
-        extraEnv.put("KAFKA_SSL_TRUSTSTORE_PASSWORD", password);
-        extraEnv.put("KAFKA_SSL_TRUSTSTORE_TYPE", TlsFixture.STORE_TYPE_PKCS12);
-        extraEnv.put("KAFKA_SSL_CLIENT_AUTH", "none");
-        extraEnv.put("KAFKA_SSL_ENABLED_PROTOCOLS", protocol);
-        extraEnv.put("KAFKA_SSL_PROTOCOL", protocol);
-
-        Map<String, Object> clientSslConfig = Map.of(
-            CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SSL.name,
-            SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG, "PEM",
-            SslConfigs.SSL_TRUSTSTORE_CERTIFICATES_CONFIG, tls.caCertificatePem(),
-            SslConfigs.SSL_ENABLED_PROTOCOLS_CONFIG, List.of(protocol),
-            SslConfigs.SSL_PROTOCOL_CONFIG, protocol);
-
-        return ClusterConfig.defaultBuilder()
-            .setExecutionModes(Set.of(ExecutionMode.CONTAINER))
-            .setBrokers(1)
-            .setControllers(1)
-            .setBrokerSecurityProtocol(SecurityProtocol.SSL)
-            .setExtraEnv(extraEnv)
-            .setFilesToMount(filesToMount)
-            .setClientSslConfig(clientSslConfig)
-            .setTags(List.of("tlsProtocol=" + protocol))
-            .build();
-    }
-
-    @Tag("system")
-    @Timeout(120)
-    @ClusterTemplate("generateProtocolConfigs")
+    @ClusterSystemTemplate("generateProtocolConfigs")
     void testProduceConsumePinnedToSingleTlsProtocol(ClusterInstance cluster) throws Exception {
         String topicName = "tls-protocol-test-topic";
         cluster.createTopic(topicName, 1, (short) 1);

@@ -17,17 +17,13 @@
 
 package org.apache.kafka.systemtests.security.fips;
 
-import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.common.config.SslConfigs;
-import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.common.test.ClusterInstance;
 import org.apache.kafka.common.test.api.ClusterConfig;
-import org.apache.kafka.common.test.api.ClusterTemplate;
-import org.apache.kafka.common.test.api.ExecutionMode;
+import org.apache.kafka.common.test.api.ClusterSystemTemplate;
 import org.apache.kafka.systemtests.utils.ClientUtils;
-import org.apache.kafka.systemtests.utils.security.TlsFixture;
+import org.apache.kafka.systemtests.utils.security.TlsCluster;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -39,13 +35,7 @@ import org.testcontainers.images.builder.Transferable;
 import org.testcontainers.utility.DockerImageName;
 
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -68,44 +58,9 @@ public class FipsSt {
     private static final int NUM_MESSAGES = 100;
 
     static List<ClusterConfig> generateFipsSslConfigs() throws Exception {
-        TlsFixture tls = TlsFixture.generate();
-        byte[] serverKeyStore = tls.serverKeyStoreBytes(TlsFixture.STORE_TYPE_PKCS12, "kafka-0", "kafka-1", "localhost");
-        byte[] trustStore = tls.trustStoreBytes(TlsFixture.STORE_TYPE_PKCS12);
-        String storePassword = new String(TlsFixture.STORE_PASSWORD);
-
-        String keyStorePath = "/etc/kafka/secrets/kafka.server.keystore.p12";
-        String trustStorePath = "/etc/kafka/secrets/kafka.server.truststore.p12";
-
-        Map<String, byte[]> filesToMount = Map.of(
-            keyStorePath, serverKeyStore,
-            trustStorePath, trustStore);
-
-        Map<String, String> extraEnv = new HashMap<>();
-        extraEnv.put("KAFKA_SSL_KEYSTORE_LOCATION", keyStorePath);
-        extraEnv.put("KAFKA_SSL_KEYSTORE_PASSWORD", storePassword);
-        extraEnv.put("KAFKA_SSL_KEYSTORE_TYPE", TlsFixture.STORE_TYPE_PKCS12);
-        extraEnv.put("KAFKA_SSL_TRUSTSTORE_LOCATION", trustStorePath);
-        extraEnv.put("KAFKA_SSL_TRUSTSTORE_PASSWORD", storePassword);
-        extraEnv.put("KAFKA_SSL_TRUSTSTORE_TYPE", TlsFixture.STORE_TYPE_PKCS12);
-        extraEnv.put("KAFKA_SSL_CLIENT_AUTH", "none");
-
-        Map<String, Object> clientSslConfig = Map.of(
-            CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SSL.name,
-            SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG, "PEM",
-            SslConfigs.SSL_TRUSTSTORE_CERTIFICATES_CONFIG, tls.caCertificatePem());
-
-        ClusterConfig config = ClusterConfig.defaultBuilder()
-            .setExecutionModes(Set.of(ExecutionMode.CONTAINER))
-            .setBrokers(1)
-            .setControllers(1)
-            .setBrokerSecurityProtocol(SecurityProtocol.SSL)
-            .setContainerImage(FipsFixture.imageTag())
-            .setExtraEnv(extraEnv)
-            .setFilesToMount(filesToMount)
-            .setClientSslConfig(clientSslConfig)
-            .build();
-
-        return List.of(config);
+        return List.of(TlsCluster.builder()
+            .containerImage(FipsFixture.imageTag())
+            .build());
     }
 
     /**
@@ -121,50 +76,11 @@ public class FipsSt {
      * client-side PEM parsing (whose FIPS state depends on which JDK build runs the tests).
      */
     static List<ClusterConfig> generateFipsPemConfigs() throws Exception {
-        TlsFixture tls = TlsFixture.generate();
-
-        // Covers both isolated KRAFT (kafka-0=controller, kafka-1=broker) and combined CO_KRAFT
-        // (kafka-0=both), since either id could end up being the broker.
-        byte[] serverPem = tls.serverKeyStorePem("kafka-0", "kafka-1", "localhost");
-        String caPem = tls.caCertificatePem();
-
-        String keyStorePath = "/etc/kafka/secrets/kafka.server.keystore.pem";
-        String trustStorePath = "/etc/kafka/secrets/kafka.server.truststore.pem";
-
-        Map<String, byte[]> filesToMount = Map.of(
-            keyStorePath, serverPem,
-            trustStorePath, caPem.getBytes(StandardCharsets.UTF_8));
-
-        // PEM format carries no store password: DefaultSslEngineFactory rejects one if set.
-        Map<String, String> extraEnv = new HashMap<>();
-        extraEnv.put("KAFKA_SSL_KEYSTORE_LOCATION", keyStorePath);
-        extraEnv.put("KAFKA_SSL_KEYSTORE_TYPE", "PEM");
-        extraEnv.put("KAFKA_SSL_TRUSTSTORE_LOCATION", trustStorePath);
-        extraEnv.put("KAFKA_SSL_TRUSTSTORE_TYPE", "PEM");
-        extraEnv.put("KAFKA_SSL_CLIENT_AUTH", "none");
-
-        Path clientTrustStore = Files.createTempFile("fips-client-truststore", ".p12");
-        clientTrustStore.toFile().deleteOnExit();
-        Files.write(clientTrustStore, tls.trustStoreBytes(TlsFixture.STORE_TYPE_PKCS12));
-
-        Map<String, Object> clientSslConfig = Map.of(
-            CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SSL.name,
-            SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG, TlsFixture.STORE_TYPE_PKCS12,
-            SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, clientTrustStore.toString(),
-            SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, new String(TlsFixture.STORE_PASSWORD));
-
-        ClusterConfig config = ClusterConfig.defaultBuilder()
-            .setExecutionModes(Set.of(ExecutionMode.CONTAINER))
-            .setBrokers(1)
-            .setControllers(1)
-            .setBrokerSecurityProtocol(SecurityProtocol.SSL)
-            .setContainerImage(FipsFixture.imageTag())
-            .setExtraEnv(extraEnv)
-            .setFilesToMount(filesToMount)
-            .setClientSslConfig(clientSslConfig)
-            .build();
-
-        return List.of(config);
+        return List.of(TlsCluster.builder()
+            .brokerStoreType(TlsCluster.StoreType.PEM)
+            .clientTrustStoreType(TlsCluster.StoreType.PKCS12)
+            .containerImage(FipsFixture.imageTag())
+            .build());
     }
 
     /**
@@ -173,10 +89,9 @@ public class FipsSt {
      * common TLS path still works — it does <em>not</em> cover KAFKA-20997, which only fires for
      * PEM stores; see {@link #testProduceConsumeOverPemTlsUnderFips(ClusterInstance)} for that.
      */
-    @Tag("system")
     @Tag("fips")
     @Timeout(180)
-    @ClusterTemplate("generateFipsSslConfigs")
+    @ClusterSystemTemplate("generateFipsSslConfigs")
     void testProduceConsumeAndAdminOverTlsUnderFips(ClusterInstance cluster) throws Exception {
         String topicName = "fips-tls-test-topic";
         cluster.createTopic(topicName, 1, (short) 1);
@@ -198,10 +113,9 @@ public class FipsSt {
      * fails to start because {@code PemStore}'s class initializer cannot build a DSA
      * {@code KeyFactory}, so this fails at cluster startup rather than at produce/consume.
      */
-    @Tag("system")
     @Tag("fips")
     @Timeout(180)
-    @ClusterTemplate("generateFipsPemConfigs")
+    @ClusterSystemTemplate("generateFipsPemConfigs")
     void testProduceConsumeOverPemTlsUnderFips(ClusterInstance cluster) throws Exception {
         String topicName = "fips-pem-tls-test-topic";
         cluster.createTopic(topicName, 1, (short) 1);

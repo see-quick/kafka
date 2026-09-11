@@ -32,6 +32,8 @@ Usage:
         <kafka_archive> can be passed as an alternative to <kafka_url> to use a local kafka archive. The path of kafka_archive should be absolute.
         -b can be passed as additional argument if you just want to build the image.
         -t can be passed if you just want to run tests on the image.
+        --base-image can be passed to override the Dockerfile's default base image, e.g. to pick a
+        different JDK version or distro release without editing the Dockerfile.
 """
 
 from datetime import date
@@ -77,6 +79,11 @@ if __name__ == '__main__':
     parser.add_argument("--image-type", "-type", choices=["jvm", "jvm-ubi", "native"], default="jvm", dest="image_type", help="Image type you want to build")
     parser.add_argument("--build", "-b", action="store_true", dest="build_only", default=False, help="Only build the image, don't run tests")
     parser.add_argument("--test", "-t", action="store_true", dest="test_only", default=False, help="Only run the tests, don't build the image")
+    # Every Dockerfile declares `ARG base_image` with a sensible default, so this only needs to be
+    # passed to override it, e.g. a different JDK version or distro release within the same image
+    # type. The base image must stay within the image type's package-manager family: the `jvm`
+    # Dockerfile uses apk, `jvm-ubi` uses microdnf.
+    parser.add_argument("--base-image", dest="base_image", default=None, help="Base image to build on top of, overriding the Dockerfile's default (e.g. registry.access.redhat.com/ubi10/openjdk-17-runtime)")
 
     archive_group = parser.add_mutually_exclusive_group(required=True)
     archive_group.add_argument("--kafka-url", "-u", dest="kafka_url", help="Kafka url to be used to download kafka binary tarball in the docker image")
@@ -84,13 +91,15 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    base_image_arg = f"--build-arg base_image={args.base_image} " if args.base_image else ""
+
     if args.build_only or not (args.build_only or args.test_only):
         if args.kafka_url:
-            build_docker_image_runner(f"docker build -f $DOCKER_FILE -t {args.image}:{args.tag} --build-arg kafka_url={args.kafka_url} --build-arg build_date={date.today()} --no-cache --progress=plain $DOCKER_DIR", args.image_type)
+            build_docker_image_runner(f"docker build -f $DOCKER_FILE -t {args.image}:{args.tag} {base_image_arg}--build-arg kafka_url={args.kafka_url} --build-arg build_date={date.today()} --no-cache --progress=plain $DOCKER_DIR", args.image_type)
         elif args.kafka_archive:
             # kafka_url is explicitly set to empty (rather than left unset) so the ARG is
             # defined in Dockerfiles that check it under `set -u`, e.g. jvm-ubi's `[ -n "$kafka_url" ]`.
-            build_docker_image_runner(f"docker build -f $DOCKER_FILE -t {args.image}:{args.tag} --build-arg kafka_url= --build-arg build_date={date.today()} --no-cache --progress=plain $DOCKER_DIR", args.image_type, args.kafka_archive)
+            build_docker_image_runner(f"docker build -f $DOCKER_FILE -t {args.image}:{args.tag} {base_image_arg}--build-arg kafka_url= --build-arg build_date={date.today()} --no-cache --progress=plain $DOCKER_DIR", args.image_type, args.kafka_archive)
     
     if args.test_only or not (args.build_only or args.test_only):
         run_docker_tests(args.image, args.tag, args.kafka_url, args.kafka_archive, args.image_type)

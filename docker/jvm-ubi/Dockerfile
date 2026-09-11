@@ -16,9 +16,18 @@
 # limitations under the License.
 ###############################################################################
 #
-# UBI10-based variant of docker/jvm/Dockerfile. Same image layout and entrypoint
+# RPM/microdnf-based variant of docker/jvm/Dockerfile. Same image layout and entrypoint
 # contract (/opt/kafka, /etc/kafka/docker/*, appuser), ported from apk/BusyBox to
 # microdnf/shadow-utils since UBI does not carry either.
+#
+# The base image below is only a default. Override it with
+# `docker_build_test.py --base-image <ref>` (or `-PsystemTestBaseImage=<ref>` via Gradle) to pick a
+# different JDK version or distro release, e.g.
+#   registry.access.redhat.com/ubi10/openjdk-17-runtime
+#   registry.access.redhat.com/ubi9/openjdk-21-runtime
+# Nothing below is Red Hat specific beyond package names, so any microdnf-based image carrying a
+# JDK works; the Java version comes from the base image alone. An apk-based image needs the `jvm`
+# image type instead.
 #
 
 ARG base_image=registry.access.redhat.com/ubi10/openjdk-21-runtime

@@ -1863,6 +1863,10 @@ project(':systemtests') {
   // systemTest -PkafkaContainerImage=<name:tag>. Not part of build/check.
   // Usage: ./gradlew :systemtests:buildSystemTestImage \
   //          -PsystemTestImage=kafka-systemtest:ubi-local -PsystemTestImageType=jvm-ubi
+  // The image type selects the Dockerfile (i.e. the package-manager family: jvm=apk,
+  // jvm-ubi=microdnf), while -PsystemTestBaseImage overrides that Dockerfile's default base image
+  // to pick a JDK version or distro release, e.g.
+  //          -PsystemTestBaseImage=registry.access.redhat.com/ubi10/openjdk-17-runtime
   task buildSystemTestImage(type: Exec) {
     group = 'Docker'
     description = 'Builds a local Kafka Docker image (default jvm-ubi) from this checkout\'s releaseTarGz'
@@ -1876,10 +1880,15 @@ project(':systemtests') {
       String imageTag = parts.size() > 1 ? parts[1] : 'latest'
       File kafkaArchive = project(':core').tasks.releaseTarGz.archiveFile.get().asFile
 
-      workingDir "$rootDir/docker"
-      commandLine 'python3', 'docker_build_test.py', imageName,
+      List<String> args = ['python3', 'docker_build_test.py', imageName,
           '--image-tag', imageTag, '--image-type', imageType, '--build',
-          '--kafka-archive', kafkaArchive.absolutePath
+          '--kafka-archive', kafkaArchive.absolutePath]
+      if (project.hasProperty('systemTestBaseImage')) {
+        args += ['--base-image', systemTestBaseImage]
+      }
+
+      workingDir "$rootDir/docker"
+      commandLine args
     }
   }
 

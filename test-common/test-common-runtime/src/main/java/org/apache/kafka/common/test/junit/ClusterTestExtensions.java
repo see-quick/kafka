@@ -21,6 +21,7 @@ import org.apache.kafka.common.test.api.AutoStart;
 import org.apache.kafka.common.test.api.ClusterConfig;
 import org.apache.kafka.common.test.api.ClusterConfigProperty;
 import org.apache.kafka.common.test.api.ClusterFeature;
+import org.apache.kafka.common.test.api.ClusterSystemTemplate;
 import org.apache.kafka.common.test.api.ClusterSystemTest;
 import org.apache.kafka.common.test.api.ClusterSystemTests;
 import org.apache.kafka.common.test.api.ClusterTemplate;
@@ -68,6 +69,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *     <li>{@link ClusterTest}, define a single cluster configuration</li>
  *     <li>{@link ClusterTests}, provide multiple instances of @ClusterTest</li>
  *     <li>{@link ClusterTemplate}, define a static method that generates cluster configurations</li>
+ *     <li>{@link ClusterSystemTest}, define a single container-based system test configuration</li>
+ *     <li>{@link ClusterSystemTests}, provide multiple instances of @ClusterSystemTest</li>
+ *     <li>{@link ClusterSystemTemplate}, @ClusterTemplate for system tests</li>
  * </ul>
  *
  * Any combination of these annotations may be used on a given test template method. If no test invocations are
@@ -149,6 +153,7 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
     private boolean isClusterTest(ExtensionContext context) {
         Method method = context.getRequiredTestMethod();
         return method.getDeclaredAnnotation(ClusterTemplate.class) != null ||
+            method.getDeclaredAnnotation(ClusterSystemTemplate.class) != null ||
             method.getDeclaredAnnotation(ClusterTest.class) != null ||
             method.getDeclaredAnnotation(ClusterTests.class) != null ||
             method.getDeclaredAnnotation(ClusterSystemTest.class) != null ||
@@ -164,6 +169,14 @@ public class ClusterTestExtensions implements TestTemplateInvocationContextProvi
         ClusterTemplate clusterTemplateAnnot = context.getRequiredTestMethod().getDeclaredAnnotation(ClusterTemplate.class);
         if (clusterTemplateAnnot != null) {
             generatedContexts.addAll(processClusterTemplate(context, clusterTemplateAnnot.value()));
+        }
+
+        // Process the @ClusterSystemTemplate annotation, identical to @ClusterTemplate apart from
+        // the tag and timeout it carries
+        ClusterSystemTemplate clusterSystemTemplateAnnot =
+            context.getRequiredTestMethod().getDeclaredAnnotation(ClusterSystemTemplate.class);
+        if (clusterSystemTemplateAnnot != null) {
+            generatedContexts.addAll(processClusterTemplate(context, clusterSystemTemplateAnnot.value()));
         }
 
         // Process single @ClusterTest annotation
