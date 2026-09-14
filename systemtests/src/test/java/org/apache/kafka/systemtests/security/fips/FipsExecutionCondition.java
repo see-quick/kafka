@@ -22,7 +22,7 @@ import org.junit.jupiter.api.extension.ExecutionCondition;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 /**
- * Gates FIPS tests on the test JVM's host actually running in FIPS mode, so they skip cleanly on
+ * Backs {@link FipsEnabled}: gates FIPS tests on the test JVM's host actually running in FIPS mode, so they skip cleanly on
  * dev laptops and non-FIPS CI runners rather than failing (or, worse, passing against a faked
  * environment) because the host can't back up what the test claims to verify.
  */

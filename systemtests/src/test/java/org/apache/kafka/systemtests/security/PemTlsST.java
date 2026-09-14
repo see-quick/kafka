@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * KeyFactory broke every PEM keystore, RSA-only ones included). PKCS#8, unencrypted, RSA.
  *
  * <p>Note this only reproduces KAFKA-20997 itself on a FIPS-restricted JVM, which the default
- * container image is not; see {@code FipsSt.testProduceConsumeOverPemTlsUnderFips} for that.
+ * container image is not; see {@code FipsST.testProduceConsumeOverPemTlsUnderFips} for that.
  */
 public class PemTlsST {
 

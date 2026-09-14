@@ -29,7 +29,6 @@ import org.apache.kafka.systemtests.utils.security.TlsCluster;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.testcontainers.containers.Container;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.images.builder.Transferable;
@@ -46,7 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * The UBI10 image running on a genuinely FIPS-mode host, where the container transparently
  * inherits the host kernel's real {@code /proc/sys/crypto/fips_enabled=1} and Red Hat's FIPS
  * provider swap activates for real — no bind-mount simulation. Gated by
- * {@link FipsExecutionCondition}, which skips these tests on any host that isn't actually running
+ * {@link FipsEnabled}, which skips these tests on any host that isn't actually running
  * in FIPS mode (that includes every macOS/Windows Docker Desktop or Podman machine setup, since
  * the container runtime there runs inside a non-FIPS Linux VM regardless of the host OS).
  *
@@ -58,8 +57,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * The build fails fast if the FIPS tier is requested without an image, since the default
  * {@code apache/kafka:latest} would pass these tests for the wrong reason.
  */
-@ExtendWith(FipsExecutionCondition.class)
-public class FipsSt {
+@FipsEnabled
+public class FipsST {
 
     private static final int NUM_MESSAGES = 100;
 

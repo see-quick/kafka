@@ -1827,7 +1827,7 @@ project(':systemtests') {
     }
 
     // Opt-in only: real-FIPS tests (@Tag("fips")) require the host itself to be running in FIPS
-    // mode (checked at runtime by FipsExecutionCondition; there is no simulation), so they're
+    // mode (checked at runtime by the @FipsEnabled condition; there is no simulation), so they're
     // excluded from the default run and only collected when explicitly requested.
     // Usage, on a genuinely FIPS-mode host: ./gradlew :systemtests:systemTest \
     //          -PkafkaSystemtestsFips=true -PkafkaSystemTestsImage=kafka-systemtest:ubi-local
