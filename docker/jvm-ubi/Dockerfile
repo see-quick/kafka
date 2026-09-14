@@ -22,9 +22,23 @@
 #
 # The base image below is only a default. Override it with
 # `docker_build_test.py --base-image <ref>` (or `-PsystemTestBaseImage=<ref>` via Gradle) to pick a
-# different JDK version or distro release, e.g.
-#   registry.access.redhat.com/ubi10/openjdk-17-runtime
-#   registry.access.redhat.com/ubi9/openjdk-21-runtime
+# different distro release or JDK version. All of these work unmodified, under
+# registry.access.redhat.com:
+#
+#   RHEL 8   ubi8/openjdk-{11,17,21}-runtime
+#   RHEL 9   ubi9/openjdk-{11,17,21}-runtime
+#   RHEL 10  ubi10/openjdk-{21,25}-runtime      (10 ships no JDK 11 or 17)
+#
+# The three releases agree on everything this file depends on: microdnf is the package manager, the
+# `bash` and `tar` it needs are already present, the `procps-ng gzip hostname` it installs are not,
+# and shadow-utils (`useradd`) is preinstalled. They differ only in $HOME (/home/jboss on 8 versus
+# /home/default on 9 and 10) and $JAVA_HOME, neither of which is used below: `WORKDIR /` normalizes
+# the former and the launch scripts resolve java from PATH.
+#
+# The UBI images are multi-arch (amd64, arm64, ppc64le, s390x) and resolve to the container
+# runtime's default platform, so pass `--platform` / `-PsystemTestPlatform` to pin it rather than
+# silently building for a foreign arch and running the tests under emulation.
+#
 # Nothing below is Red Hat specific beyond package names, so any microdnf-based image carrying a
 # JDK works; the Java version comes from the base image alone. An apk-based image needs the `jvm`
 # image type instead.
@@ -36,8 +50,9 @@ FROM ${base_image} AS build-jsa
 
 USER root
 
-# UBI images default WORKDIR to /home/default; normalize to / so the relative
-# paths below (opt/kafka, kafka.tgz) behave the same as on the Alpine variant.
+# UBI images default WORKDIR to the runtime user's home (/home/default on UBI 9 and 10,
+# /home/jboss on UBI 8); normalize to / so the relative paths below (opt/kafka, kafka.tgz)
+# behave the same across releases and as on the Alpine variant.
 WORKDIR /
 
 # Get kafka from https://archive.apache.org/dist/kafka and pass the url through build arguments
@@ -74,8 +89,9 @@ EXPOSE 9092
 
 USER root
 
-# UBI images default WORKDIR to /home/default; normalize to / so the relative
-# paths below (opt/kafka, kafka.tgz) behave the same as on the Alpine variant.
+# UBI images default WORKDIR to the runtime user's home (/home/default on UBI 9 and 10,
+# /home/jboss on UBI 8); normalize to / so the relative paths below (opt/kafka, kafka.tgz)
+# behave the same across releases and as on the Alpine variant.
 WORKDIR /
 
 # Get kafka from https://archive.apache.org/dist/kafka and pass the url through build arguments

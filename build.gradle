@@ -1869,6 +1869,10 @@ project(':systemtests') {
   // jvm-ubi=microdnf), while -PsystemTestBaseImage overrides that Dockerfile's default base image
   // to pick a JDK version or distro release, e.g.
   //          -PsystemTestBaseImage=registry.access.redhat.com/ubi10/openjdk-17-runtime
+  // jvm-ubi is verified against UBI 8, 9 and 10 (see docker/jvm-ubi/Dockerfile for the tested set).
+  // -PsystemTestPlatform pins the architecture, e.g. -PsystemTestPlatform=linux/arm64. The UBI base
+  // images are multi-arch, so without it the build follows the container runtime's default and can
+  // end up emulated, which is slow enough to trip container startup timeouts.
   task buildSystemTestImage(type: Exec) {
     group = 'Docker'
     description = 'Builds a local Kafka Docker image (default jvm-ubi) from this checkout\'s releaseTarGz'
@@ -1887,6 +1891,9 @@ project(':systemtests') {
           '--kafka-archive', kafkaArchive.absolutePath]
       if (project.hasProperty('systemTestBaseImage')) {
         args += ['--base-image', systemTestBaseImage]
+      }
+      if (project.hasProperty('systemTestPlatform')) {
+        args += ['--platform', systemTestPlatform]
       }
 
       workingDir "$rootDir/docker"

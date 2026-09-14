@@ -34,6 +34,8 @@ Usage:
         -t can be passed if you just want to run tests on the image.
         --base-image can be passed to override the Dockerfile's default base image, e.g. to pick a
         different JDK version or distro release without editing the Dockerfile.
+        --platform can be passed to pin the target architecture, e.g. linux/arm64 so a multi-arch
+        base image isn't pulled as amd64 and then emulated.
 """
 
 from datetime import date
@@ -84,6 +86,11 @@ if __name__ == '__main__':
     # type. The base image must stay within the image type's package-manager family: the `jvm`
     # Dockerfile uses apk, `jvm-ubi` uses microdnf.
     parser.add_argument("--base-image", dest="base_image", default=None, help="Base image to build on top of, overriding the Dockerfile's default (e.g. registry.access.redhat.com/ubi10/openjdk-17-runtime)")
+    # Multi-arch base images resolve to the daemon's default platform, which on a Linux x86 CI host
+    # and an Apple Silicon laptop are different architectures. Left unset the build follows that
+    # default; pass this to pin it, e.g. linux/arm64 to avoid silently running the image under
+    # emulation (measurably slower, and slow enough to trip container startup timeouts).
+    parser.add_argument("--platform", dest="platform", default=None, help="Target platform to build for, e.g. linux/amd64 or linux/arm64 (default: the container runtime's own)")
 
     archive_group = parser.add_mutually_exclusive_group(required=True)
     archive_group.add_argument("--kafka-url", "-u", dest="kafka_url", help="Kafka url to be used to download kafka binary tarball in the docker image")
@@ -92,14 +99,15 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     base_image_arg = f"--build-arg base_image={args.base_image} " if args.base_image else ""
+    platform_arg = f"--platform {args.platform} " if args.platform else ""
 
     if args.build_only or not (args.build_only or args.test_only):
         if args.kafka_url:
-            build_docker_image_runner(f"docker build -f $DOCKER_FILE -t {args.image}:{args.tag} {base_image_arg}--build-arg kafka_url={args.kafka_url} --build-arg build_date={date.today()} --no-cache --progress=plain $DOCKER_DIR", args.image_type)
+            build_docker_image_runner(f"docker build -f $DOCKER_FILE -t {args.image}:{args.tag} {platform_arg}{base_image_arg}--build-arg kafka_url={args.kafka_url} --build-arg build_date={date.today()} --no-cache --progress=plain $DOCKER_DIR", args.image_type)
         elif args.kafka_archive:
             # kafka_url is explicitly set to empty (rather than left unset) so the ARG is
             # defined in Dockerfiles that check it under `set -u`, e.g. jvm-ubi's `[ -n "$kafka_url" ]`.
-            build_docker_image_runner(f"docker build -f $DOCKER_FILE -t {args.image}:{args.tag} {base_image_arg}--build-arg kafka_url= --build-arg build_date={date.today()} --no-cache --progress=plain $DOCKER_DIR", args.image_type, args.kafka_archive)
+            build_docker_image_runner(f"docker build -f $DOCKER_FILE -t {args.image}:{args.tag} {platform_arg}{base_image_arg}--build-arg kafka_url= --build-arg build_date={date.today()} --no-cache --progress=plain $DOCKER_DIR", args.image_type, args.kafka_archive)
     
     if args.test_only or not (args.build_only or args.test_only):
         run_docker_tests(args.image, args.tag, args.kafka_url, args.kafka_archive, args.image_type)
