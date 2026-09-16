@@ -20,14 +20,19 @@ package org.apache.kafka.common.test.container;
 import kafka.server.ControllerServer;
 import kafka.server.KafkaBroker;
 
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.clients.consumer.GroupProtocol;
 import org.apache.kafka.common.acl.AccessControlEntry;
 import org.apache.kafka.common.acl.AclBindingFilter;
+import org.apache.kafka.common.config.SaslConfigs;
+import org.apache.kafka.common.config.SslConfigs;
+import org.apache.kafka.common.config.internals.BrokerSecurityConfigs;
 import org.apache.kafka.common.network.ListenerName;
 import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.common.test.ClusterInstance;
+import org.apache.kafka.common.test.JaasUtils;
 import org.apache.kafka.common.test.api.ClusterConfig;
 import org.apache.kafka.common.test.api.ExecutionMode;
 import org.apache.kafka.common.test.api.Type;
@@ -35,8 +40,11 @@ import org.apache.kafka.common.test.junit.RaftClusterInvocationContext;
 import org.apache.kafka.server.authorizer.Authorizer;
 import org.apache.kafka.server.fault.FaultHandlerException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.HashMap;
@@ -55,23 +63,43 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class ContainerClusterInstance implements ClusterInstance {
 
+    private static final Logger LOG = LoggerFactory.getLogger(ContainerClusterInstance.class);
+    private static final String DEFAULT_SASL_MECHANISM = "PLAIN";
+
     private final ClusterConfig clusterConfig;
     private final KafkaContainerCluster cluster;
     private final AtomicBoolean started = new AtomicBoolean(false);
     private final AtomicBoolean stopped = new AtomicBoolean(false);
     private final ListenerName listenerName;
     private final boolean isCombined;
+    private final String saslMechanism;
+    // Null unless the broker listener is TLS and the config brought no material of its own.
+    private final ContainerSslManager sslManager;
 
     public ContainerClusterInstance(ClusterConfig clusterConfig, boolean isCombined) {
         this.clusterConfig = clusterConfig;
         this.isCombined = isCombined;
         this.listenerName = clusterConfig.brokerListenerName();
+        this.saslMechanism = resolveSaslMechanism(clusterConfig);
+        this.sslManager = createSslManager(clusterConfig);
+
+        // The config's own env and files win over the generated defaults, so a test can still
+        // override any single KAFKA_SSL_* setting without bringing its own certificates.
+        Map<String, String> extraEnv = new HashMap<>();
+        Map<String, byte[]> filesToMount = new HashMap<>();
+        if (sslManager != null) {
+            extraEnv.putAll(sslManager.brokerEnv());
+            filesToMount.putAll(sslManager.filesToMount());
+        }
+        extraEnv.putAll(clusterConfig.extraEnv());
+        filesToMount.putAll(clusterConfig.filesToMount());
+
         KafkaNodeConfig nodeConfig = KafkaNodeConfig.builder()
             .securityProtocol(clusterConfig.brokerSecurityProtocol())
-            .saslMechanism(clusterConfig.saslMechanism())
+            .saslMechanism(saslMechanism)
             .serverProperties(clusterConfig.serverProperties())
-            .extraEnv(clusterConfig.extraEnv())
-            .filesToMount(clusterConfig.filesToMount())
+            .extraEnv(extraEnv)
+            .filesToMount(filesToMount)
             .build();
         this.cluster = new KafkaContainerCluster(
             clusterConfig.numBrokers(),
@@ -80,6 +108,50 @@ public class ContainerClusterInstance implements ClusterInstance {
             nodeConfig,
             clusterConfig.containerImage().orElse(null)
         );
+    }
+
+    /**
+     * Generates the broker's TLS material when the config asks for a TLS listener but supplies
+     * none, mirroring how the in-memory cluster provisions its own {@code SslManager}. The store
+     * encodings follow the broker's {@code ssl.keystore.type} / {@code ssl.truststore.type}
+     * server properties (PKCS12 unless set), which is how a test asks for PEM on the broker.
+     */
+    private static ContainerSslManager createSslManager(ClusterConfig clusterConfig) {
+        if (!isSsl(clusterConfig.brokerSecurityProtocol()) || !clusterConfig.clientSslConfig().isEmpty()) {
+            return null;
+        }
+        Map<String, String> serverProperties = clusterConfig.serverProperties();
+        return new ContainerSslManager(
+            serverProperties.getOrDefault(SslConfigs.SSL_KEYSTORE_TYPE_CONFIG, ContainerSslManager.DEFAULT_STORE_TYPE),
+            serverProperties.getOrDefault(SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG, ContainerSslManager.DEFAULT_STORE_TYPE),
+            ContainerSslManager.sanDnsNames(clusterConfig.numBrokers(), clusterConfig.numControllers()));
+    }
+
+    /**
+     * The mechanism the client authenticates with: an explicit {@link ClusterConfig#saslMechanism()},
+     * else the first of the broker's {@code sasl.enabled.mechanisms}, else PLAIN like the in-memory
+     * cluster. Null for non-SASL listeners.
+     */
+    private static String resolveSaslMechanism(ClusterConfig clusterConfig) {
+        if (!isSasl(clusterConfig.brokerSecurityProtocol())) {
+            return null;
+        }
+        if (clusterConfig.saslMechanism() != null) {
+            return clusterConfig.saslMechanism();
+        }
+        String enabledMechanisms = clusterConfig.serverProperties().get(BrokerSecurityConfigs.SASL_ENABLED_MECHANISMS_CONFIG);
+        if (enabledMechanisms != null && !enabledMechanisms.isBlank()) {
+            return enabledMechanisms.split(",")[0].trim();
+        }
+        return DEFAULT_SASL_MECHANISM;
+    }
+
+    private static boolean isSsl(SecurityProtocol protocol) {
+        return protocol == SecurityProtocol.SSL || protocol == SecurityProtocol.SASL_SSL;
+    }
+
+    private static boolean isSasl(SecurityProtocol protocol) {
+        return protocol == SecurityProtocol.SASL_PLAINTEXT || protocol == SecurityProtocol.SASL_SSL;
     }
 
     @Override
@@ -156,6 +228,13 @@ public class ContainerClusterInstance implements ClusterInstance {
     public void stop() {
         if (stopped.compareAndSet(false, true)) {
             cluster.stop();
+            if (sslManager != null) {
+                try {
+                    sslManager.close();
+                } catch (IOException e) {
+                    LOG.warn("Failed to delete the client truststore", e);
+                }
+            }
         }
     }
 
@@ -202,20 +281,41 @@ public class ContainerClusterInstance implements ClusterInstance {
         }
     }
 
+    /**
+     * Authenticates the client as the admin user the cluster created for its mechanism (see
+     * {@link KafkaContainerCluster}), unless the config supplies its own
+     * {@link ClusterConfig#clientSaslConfig()}, which then wins wholesale.
+     */
     @Override
     public Map<String, Object> setClientSaslConfig(Map<String, Object> configs) {
         SecurityProtocol protocol = clusterConfig.brokerSecurityProtocol();
-        if (protocol != SecurityProtocol.SASL_PLAINTEXT && protocol != SecurityProtocol.SASL_SSL) {
+        if (!isSasl(protocol)) {
             return configs;
         }
+        Map<String, Object> merged = new HashMap<>(configs);
         if (!clusterConfig.clientSaslConfig().isEmpty()) {
-            Map<String, Object> merged = new HashMap<>(configs);
             merged.putAll(clusterConfig.clientSaslConfig());
             return merged;
         }
-        throw new UnsupportedOperationException(
-            "SASL client configuration is not yet implemented for container-based clusters; "
-                + "populate ClusterConfig.clientSaslConfig(), e.g. from a @ClusterTemplate generator method");
+        merged.putIfAbsent(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, protocol.name);
+        merged.putIfAbsent(SaslConfigs.SASL_MECHANISM, saslMechanism);
+        merged.putIfAbsent(SaslConfigs.SASL_JAAS_CONFIG, adminJaasConfig(saslMechanism));
+        return merged;
+    }
+
+    private static String adminJaasConfig(String mechanism) {
+        if (DEFAULT_SASL_MECHANISM.equals(mechanism)) {
+            return String.format(
+                "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"%s\" password=\"%s\";",
+                JaasUtils.KAFKA_PLAIN_ADMIN, JaasUtils.KAFKA_PLAIN_ADMIN_PASSWORD);
+        }
+        if (mechanism.startsWith("SCRAM-")) {
+            return String.format(
+                "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"%s\" password=\"%s\";",
+                JaasUtils.KAFKA_SCRAM_ADMIN, JaasUtils.KAFKA_SCRAM_ADMIN_PASSWORD);
+        }
+        throw new UnsupportedOperationException("No default client credentials for SASL mechanism " + mechanism
+            + "; populate ClusterConfig.clientSaslConfig() instead");
     }
 
     @Override
@@ -247,20 +347,21 @@ public class ContainerClusterInstance implements ClusterInstance {
         throw new UnsupportedOperationException("Not yet implemented for container-based clusters");
     }
 
+    /**
+     * Points the client at the CA the broker's certificate was issued by: the generated one, or
+     * the config's own {@link ClusterConfig#clientSslConfig()} when it brought its own material.
+     * Hostname verification is left on; the generated certificate covers {@code localhost}.
+     */
     @Override
     public Map<String, Object> setClientSslConfig(Map<String, Object> configs) {
         SecurityProtocol protocol = clusterConfig.brokerSecurityProtocol();
-        if (protocol != SecurityProtocol.SSL && protocol != SecurityProtocol.SASL_SSL) {
+        if (!isSsl(protocol)) {
             return configs;
         }
-        if (!clusterConfig.clientSslConfig().isEmpty()) {
-            Map<String, Object> merged = new HashMap<>(configs);
-            merged.putAll(clusterConfig.clientSslConfig());
-            return merged;
-        }
-        throw new UnsupportedOperationException(
-            "SSL client configuration is not yet implemented for container-based clusters; "
-                + "populate ClusterConfig.clientSslConfig(), e.g. from a @ClusterTemplate generator method");
+        Map<String, Object> merged = new HashMap<>(configs);
+        merged.putIfAbsent(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, protocol.name);
+        merged.putAll(sslManager != null ? sslManager.clientSslConfig() : clusterConfig.clientSslConfig());
+        return merged;
     }
 
     @Override

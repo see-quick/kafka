@@ -1765,6 +1765,8 @@ project(':test-common:test-common-runtime') {
     implementation libs.slf4jApi
     implementation libs.testcontainers
     implementation testFixtures(project(':clients'))
+    // TestSslUtils' certificate builder is BouncyCastle-typed; needed to compile ContainerSslManager.
+    implementation libs.bcpkix
 
     testImplementation testFixtures(project(':clients'))
     testImplementation libs.junitJupiter

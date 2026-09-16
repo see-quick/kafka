@@ -41,6 +41,14 @@ final class KafkaEnvVars {
 
     static final String SASL_ENABLED_MECHANISMS = "KAFKA_SASL_ENABLED_MECHANISMS";
 
+    static final String SSL_CLIENT_AUTH = "KAFKA_SSL_CLIENT_AUTH";
+    static final String SSL_KEYSTORE_LOCATION = "KAFKA_SSL_KEYSTORE_LOCATION";
+    static final String SSL_KEYSTORE_TYPE = "KAFKA_SSL_KEYSTORE_TYPE";
+    static final String SSL_KEYSTORE_PASSWORD = "KAFKA_SSL_KEYSTORE_PASSWORD";
+    static final String SSL_TRUSTSTORE_LOCATION = "KAFKA_SSL_TRUSTSTORE_LOCATION";
+    static final String SSL_TRUSTSTORE_TYPE = "KAFKA_SSL_TRUSTSTORE_TYPE";
+    static final String SSL_TRUSTSTORE_PASSWORD = "KAFKA_SSL_TRUSTSTORE_PASSWORD";
+
     private KafkaEnvVars() {
     }
 }

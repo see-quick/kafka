@@ -18,35 +18,40 @@
 package org.apache.kafka.systemtests.security;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.config.SslConfigs;
+import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.common.test.ClusterInstance;
-import org.apache.kafka.common.test.api.ClusterConfig;
-import org.apache.kafka.common.test.api.ClusterSystemTemplate;
+import org.apache.kafka.common.test.api.ClusterConfigProperty;
+import org.apache.kafka.common.test.api.ClusterSystemTest;
 import org.apache.kafka.systemtests.utils.ClientUtils;
-import org.apache.kafka.systemtests.utils.security.TlsCluster;
+
+import org.junit.jupiter.api.Timeout;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * The PEM keystore/truststore code path,
- * direct regression coverage for the KAFKA-20997 class of bug (PemStore eagerly loading a DSA
- * KeyFactory broke every PEM keystore, RSA-only ones included). PKCS#8, unencrypted, RSA.
+ * The PEM keystore/truststore code path on the broker (PKCS#8, unencrypted, RSA): direct
+ * regression coverage for the KAFKA-20997 class of bug, where {@code PemStore} eagerly loading a
+ * DSA {@code KeyFactory} broke every PEM keystore, RSA-only ones included. The client trusts the
+ * broker through a PKCS12 store, so a failure here is the broker's PEM handling and nothing else.
  *
- * <p>Note this only reproduces KAFKA-20997 itself on a FIPS-restricted JVM, which the default
- * container image is not; see {@code FipsST.testProduceConsumeOverPemTlsUnderFips} for that.
+ * <p>On a stock JVM this only proves PEM stores work; KAFKA-20997 itself needs a FIPS-restricted
+ * provider list to fire, which is what {@link FipsST} covers.
  */
 public class PemTlsST {
 
     private static final int NUM_MESSAGES = 100;
 
-    static List<ClusterConfig> generatePemConfigs() throws Exception {
-        return List.of(TlsCluster.builder()
-            .brokerStoreType(TlsCluster.StoreType.PEM)
-            .build());
-    }
-
-    @ClusterSystemTemplate("generatePemConfigs")
+    @Timeout(120)
+    @ClusterSystemTest(
+        brokerSecurityProtocol = SecurityProtocol.SSL,
+        serverProperties = {
+            @ClusterConfigProperty(key = SslConfigs.SSL_KEYSTORE_TYPE_CONFIG, value = "PEM"),
+            @ClusterConfigProperty(key = SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG, value = "PEM")
+        }
+    )
     void testProduceConsumeOverPemTls(ClusterInstance cluster) throws Exception {
         String topicName = "pem-tls-test-topic";
         cluster.createTopic(topicName, 1, (short) 1);

@@ -17,52 +17,39 @@
 
 package org.apache.kafka.systemtests.security;
 
-import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.common.config.SaslConfigs;
+import org.apache.kafka.common.config.internals.BrokerSecurityConfigs;
 import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.common.test.ClusterInstance;
 import org.apache.kafka.common.test.JaasUtils;
-import org.apache.kafka.common.test.api.ClusterConfig;
-import org.apache.kafka.common.test.api.ClusterSystemTemplate;
+import org.apache.kafka.common.test.api.ClusterConfigProperty;
+import org.apache.kafka.common.test.api.ClusterSystemTest;
 import org.apache.kafka.systemtests.utils.ClientUtils;
-import org.apache.kafka.systemtests.utils.security.TlsCluster;
+
+import org.junit.jupiter.api.Timeout;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
- * SASL_SSL with SCRAM-SHA-512 using a
- * password well over the 16-byte floor a FIPS-restricted {@code Mac} provider enforces on the
- * HMAC key {@code ScramFormatter.hi()} derives it into (see {@link JaasUtils#KAFKA_SCRAM_ADMIN_PASSWORD}).
- * This is a positive-path test; the negative case (short password) only fails under real FIPS
- * and belongs in Tier 2 if pursued, not here.
+ * SASL_SSL with SCRAM-SHA-512. The runtime creates the SCRAM user in the broker and authenticates
+ * the client as it, using a password well over the 16-byte floor a FIPS-restricted {@code Mac}
+ * provider enforces on the HMAC key {@code ScramFormatter.hi()} derives from it (see
+ * {@link JaasUtils#KAFKA_SCRAM_ADMIN_PASSWORD}). Positive path only: the short-password rejection
+ * exists only under real FIPS and would belong in {@link FipsST}.
  */
 public class ScramSslST {
 
     private static final int NUM_MESSAGES = 100;
-    private static final String MECHANISM = "SCRAM-SHA-512";
 
-    static List<ClusterConfig> generateScramSslConfigs() throws Exception {
-        String jaasConfig = "org.apache.kafka.common.security.scram.ScramLoginModule required "
-            + "username=\"" + JaasUtils.KAFKA_SCRAM_ADMIN + "\" "
-            + "password=\"" + JaasUtils.KAFKA_SCRAM_ADMIN_PASSWORD + "\";";
-
-        return List.of(TlsCluster.builder()
-            .securityProtocol(SecurityProtocol.SASL_SSL)
-            .saslMechanism(MECHANISM)
-            .clientSaslConfig(Map.of(
-                CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SASL_SSL.name,
-                SaslConfigs.SASL_MECHANISM, MECHANISM,
-                SaslConfigs.SASL_JAAS_CONFIG, jaasConfig))
-            .build());
-    }
-
-    @ClusterSystemTemplate("generateScramSslConfigs")
+    @Timeout(120)
+    @ClusterSystemTest(
+        brokerSecurityProtocol = SecurityProtocol.SASL_SSL,
+        serverProperties = @ClusterConfigProperty(key = BrokerSecurityConfigs.SASL_ENABLED_MECHANISMS_CONFIG, value = "SCRAM-SHA-512")
+    )
     void testProduceConsumeAndAdminOverScramSsl(ClusterInstance cluster) throws Exception {
         String topicName = "scram-ssl-test-topic";
         cluster.createTopic(topicName, 1, (short) 1);

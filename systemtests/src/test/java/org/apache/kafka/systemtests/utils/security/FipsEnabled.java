@@ -15,8 +15,9 @@
  * limitations under the License.
  */
 
-package org.apache.kafka.systemtests.security.fips;
+package org.apache.kafka.systemtests.utils.security;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.lang.annotation.Documented;
@@ -27,17 +28,19 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks a test class or method as requiring a genuinely FIPS-mode host. Annotated tests run only
- * when the host kernel reports {@code /proc/sys/crypto/fips_enabled=1}, and are skipped with an
- * explanatory message everywhere else, so they neither fail on dev laptops and non-FIPS CI runners
- * nor pass against a faked environment.
+ * Marks a test class (or method) as requiring a host that is genuinely running in FIPS mode.
  *
- * @see FipsExecutionCondition
+ * <p>Carries everything the FIPS tier needs so the test itself only declares its cluster: the
+ * {@code fips} tag the Gradle {@code systemTest} task excludes unless {@code -PkafkaSystemtestsFips=true}
+ * is passed, and the {@link FipsExecutionCondition} that skips the test with an explanation on any
+ * host whose kernel does not report {@code /proc/sys/crypto/fips_enabled=1}. Nothing is simulated:
+ * a test annotated with this either runs against real FIPS or does not run.
  */
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
+@Tag("fips")
 @ExtendWith(FipsExecutionCondition.class)
 public @interface FipsEnabled {
 }

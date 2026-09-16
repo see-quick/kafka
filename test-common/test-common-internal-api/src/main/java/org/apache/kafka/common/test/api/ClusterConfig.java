@@ -189,9 +189,10 @@ public class ClusterConfig {
 
     /**
      * Extra environment variables applied to every container node, on top of the cluster's own
-     * computed configuration. Populated programmatically (e.g. from a {@code @ClusterTemplate}
-     * generator method), since values such as a generated TLS keystore location/password aren't
-     * expressible as static annotation attributes.
+     * computed configuration and any TLS environment the runtime generates. Only populatable
+     * programmatically (e.g. from a {@code @ClusterTemplate} generator method); values known at
+     * annotation time belong in {@link #serverProperties()}, which the container runtime maps to
+     * environment variables itself.
      */
     public Map<String, String> extraEnv() {
         return extraEnv;
@@ -207,15 +208,20 @@ public class ClusterConfig {
 
     /**
      * Client-side SSL configuration (e.g. {@code ssl.truststore.location}) to merge into a
-     * container-based cluster's {@code ClusterInstance.setClientSslConfig}. Populated
-     * programmatically alongside {@link #filesToMount()} so the client trusts the same
-     * generated CA that was mounted into the broker containers.
+     * container-based cluster's {@code ClusterInstance.setClientSslConfig}. Leave empty for a
+     * TLS listener and the container runtime generates the broker's stores and the matching
+     * client trust itself; populate it, alongside {@link #filesToMount()}, only to bring bespoke
+     * certificates, in which case the runtime generates nothing.
      */
     public Map<String, Object> clientSslConfig() {
         return clientSslConfig;
     }
 
-    /** Client-side SASL configuration, analogous to {@link #clientSslConfig()}. */
+    /**
+     * Client-side SASL configuration. Leave empty and the container runtime authenticates the
+     * client as the admin user it created for the broker's mechanism; populate it to log in as
+     * someone else.
+     */
     public Map<String, Object> clientSaslConfig() {
         return clientSaslConfig;
     }

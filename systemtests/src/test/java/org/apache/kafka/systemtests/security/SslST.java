@@ -19,11 +19,12 @@ package org.apache.kafka.systemtests.security;
 
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.common.test.ClusterInstance;
-import org.apache.kafka.common.test.api.ClusterConfig;
-import org.apache.kafka.common.test.api.ClusterSystemTemplate;
+import org.apache.kafka.common.test.api.ClusterSystemTest;
 import org.apache.kafka.systemtests.utils.ClientUtils;
-import org.apache.kafka.systemtests.utils.security.TlsCluster;
+
+import org.junit.jupiter.api.Timeout;
 
 import java.util.List;
 
@@ -31,23 +32,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
- * Baseline TLS coverage for the container system test framework: SSL-only listener, PKCS12
- * broker keystore/truststore mounted into {@code /etc/kafka/secrets}, client trust configured
- * from an in-memory PEM export of the same CA. Exercises admin, produce and consume over TLS.
- *
- * <p>Uses {@code @ClusterSystemTemplate} rather than {@code @ClusterSystemTest} because the TLS
- * material (a freshly generated CA and keystore) is only known at test-run time, not at
- * annotation-authoring time.
+ * Baseline TLS coverage: an SSL-only listener backed by the PKCS12 keystore and truststore the
+ * container runtime provisions for any {@code brokerSecurityProtocol = SSL} cluster. Kafka's own
+ * default store type is JKS, so PKCS12 being the default here is deliberate: it guards against
+ * code that quietly assumes JKS. Exercises admin, produce and consume over the TLS listener.
  */
 public class SslST {
 
     private static final int NUM_MESSAGES = 100;
 
-    static List<ClusterConfig> generateSslConfigs() throws Exception {
-        return List.of(TlsCluster.builder().build());
-    }
-
-    @ClusterSystemTemplate("generateSslConfigs")
+    @Timeout(120)
+    @ClusterSystemTest(brokerSecurityProtocol = SecurityProtocol.SSL)
     void testProduceConsumeAndAdminOverSsl(ClusterInstance cluster) throws Exception {
         String topicName = "ssl-test-topic";
         cluster.createTopic(topicName, 1, (short) 1);

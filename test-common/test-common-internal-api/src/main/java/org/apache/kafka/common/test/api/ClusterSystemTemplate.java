@@ -33,9 +33,12 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  * {@link ClusterTemplate}, but carries the {@code system} tag and the longer timeout that
  * container-based tests need, instead of {@link ClusterTemplate}'s {@code integration} tag.
  *
- * <p>Use this whenever a system test's cluster configuration is only known at run time and so
- * cannot be expressed as {@link ClusterSystemTest} annotation attributes, e.g. TLS material that
- * has to be generated before the broker starts. Without it such tests have to hand-write
+ * <p>Reach for {@link ClusterSystemTest} first: the container runtime provisions its own TLS
+ * material and SASL credentials from {@code brokerSecurityProtocol} and the server properties, so
+ * security alone is no reason for a generator. Use this only when a cluster configuration is
+ * genuinely only known at run time, e.g. images discovered dynamically, or bespoke certificates
+ * supplied through {@link ClusterConfig#filesToMount()} and {@link ClusterConfig#clientSslConfig()}
+ * in place of the generated ones. Without it such tests would have to hand-write
  * {@code @Tag("system")} and {@code @Timeout} on every method and still end up tagged
  * {@code integration}, which puts them in the wrong task's tag filter.
  *

@@ -19,49 +19,61 @@ package org.apache.kafka.systemtests.security;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.config.SslConfigs;
+import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.common.test.ClusterInstance;
-import org.apache.kafka.common.test.api.ClusterConfig;
-import org.apache.kafka.common.test.api.ClusterSystemTemplate;
+import org.apache.kafka.common.test.api.ClusterConfigProperty;
+import org.apache.kafka.common.test.api.ClusterSystemTest;
+import org.apache.kafka.common.test.api.ClusterSystemTests;
 import org.apache.kafka.systemtests.utils.ClientUtils;
-import org.apache.kafka.systemtests.utils.security.TlsCluster;
 
-import java.util.ArrayList;
+import org.junit.jupiter.api.Timeout;
+
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * RH FIPS restricts TLS to
- * TLSv1.2/TLSv1.3, so a broker/client pinned to either protocol alone must still work.
+ * A broker and a client each pinned to a single TLS protocol version still talk to each other.
+ * FIPS crypto policies restrict TLS to TLSv1.2 and TLSv1.3, so both have to work on their own.
  */
 public class TlsProtocolST {
 
     private static final int NUM_MESSAGES = 100;
-    private static final List<String> PROTOCOLS = List.of("TLSv1.2", "TLSv1.3");
 
-    static List<ClusterConfig> generateProtocolConfigs() throws Exception {
-        List<ClusterConfig> configs = new ArrayList<>();
-        for (String protocol : PROTOCOLS) {
-            configs.add(TlsCluster.builder()
-                .env("KAFKA_SSL_ENABLED_PROTOCOLS", protocol)
-                .env("KAFKA_SSL_PROTOCOL", protocol)
-                .clientConfig(SslConfigs.SSL_ENABLED_PROTOCOLS_CONFIG, List.of(protocol))
-                .clientConfig(SslConfigs.SSL_PROTOCOL_CONFIG, protocol)
-                .tag("tlsProtocol=" + protocol)
-                .build());
-        }
-        return configs;
-    }
-
-    @ClusterSystemTemplate("generateProtocolConfigs")
+    @Timeout(120)
+    @ClusterSystemTests({
+        @ClusterSystemTest(
+            brokerSecurityProtocol = SecurityProtocol.SSL,
+            serverProperties = {
+                @ClusterConfigProperty(key = SslConfigs.SSL_ENABLED_PROTOCOLS_CONFIG, value = "TLSv1.2"),
+                @ClusterConfigProperty(key = SslConfigs.SSL_PROTOCOL_CONFIG, value = "TLSv1.2")
+            },
+            tags = "tlsProtocol=TLSv1.2"
+        ),
+        @ClusterSystemTest(
+            brokerSecurityProtocol = SecurityProtocol.SSL,
+            serverProperties = {
+                @ClusterConfigProperty(key = SslConfigs.SSL_ENABLED_PROTOCOLS_CONFIG, value = "TLSv1.3"),
+                @ClusterConfigProperty(key = SslConfigs.SSL_PROTOCOL_CONFIG, value = "TLSv1.3")
+            },
+            tags = "tlsProtocol=TLSv1.3"
+        )
+    })
     void testProduceConsumePinnedToSingleTlsProtocol(ClusterInstance cluster) throws Exception {
+        String protocol = cluster.config().serverProperties().get(SslConfigs.SSL_ENABLED_PROTOCOLS_CONFIG);
+        // Pin the client to the same single version as the broker, so neither side can fall back.
+        Map<String, String> clientConfig = Map.of(
+            SslConfigs.SSL_ENABLED_PROTOCOLS_CONFIG, protocol,
+            SslConfigs.SSL_PROTOCOL_CONFIG, protocol);
+
         String topicName = "tls-protocol-test-topic";
         cluster.createTopic(topicName, 1, (short) 1);
 
-        ClientUtils.produceMessages(cluster, topicName, NUM_MESSAGES);
+        ClientUtils.produceMessages(cluster, topicName, 0, NUM_MESSAGES, clientConfig);
         List<ConsumerRecord<String, String>> records = ClientUtils.consumeMessages(
-            cluster, topicName, 1, NUM_MESSAGES, 30_000L);
+            cluster, topicName, 1, NUM_MESSAGES, 30_000L, clientConfig);
 
-        assertEquals(NUM_MESSAGES, records.size());
+        assertEquals(NUM_MESSAGES, records.size(), "Expected " + NUM_MESSAGES + " messages over " + protocol);
     }
 }

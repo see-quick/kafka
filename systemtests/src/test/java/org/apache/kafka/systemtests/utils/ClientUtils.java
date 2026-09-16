@@ -90,12 +90,21 @@ public final class ClientUtils {
     public static List<ConsumerRecord<String, String>> consumeMessages(
             ClusterInstance cluster, String topicName, int numPartitions,
             int expectedCount, long timeoutMs) throws InterruptedException {
+        return consumeMessages(cluster, topicName, numPartitions, expectedCount, timeoutMs, Map.of());
+    }
+
+    public static List<ConsumerRecord<String, String>> consumeMessages(
+            ClusterInstance cluster, String topicName, int numPartitions,
+            int expectedCount, long timeoutMs,
+            Map<String, String> extraConsumerConfig) throws InterruptedException {
+        Map<String, String> config = new HashMap<>();
+        config.put(AUTO_OFFSET_RESET_CONFIG, "earliest");
+        config.put(KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        config.put(VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        config.putAll(extraConsumerConfig);
+
         List<ConsumerRecord<String, String>> records = new ArrayList<>();
-        try (Consumer<String, String> consumer = cluster.consumer(Map.of(
-                AUTO_OFFSET_RESET_CONFIG, "earliest",
-                KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName(),
-                VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName()))
-        ) {
+        try (Consumer<String, String> consumer = cluster.consumer(Map.copyOf(config))) {
             List<TopicPartition> partitions = new ArrayList<>();
             for (int i = 0; i < numPartitions; i++) {
                 partitions.add(new TopicPartition(topicName, i));
