@@ -41,9 +41,10 @@ import re
 def remove_args_and_hardcode_values(file_path, kafka_version, kafka_url):
     with open(file_path, 'r') as file:
         filedata = file.read()
-    filedata = filedata.replace("ARG kafka_url", f"ENV kafka_url {kafka_url}")
-    filedata = filedata.replace(
-        "ARG build_date", f"ENV build_date {str(date.today())}")
+    # Replace the whole ARG line, default value included: `ARG kafka_url=""` must not become
+    # `ENV kafka_url <url>=""`, which would make the image download a nonexistent URL.
+    filedata = re.sub(r"^ARG kafka_url\b.*$", f"ENV kafka_url {kafka_url}", filedata, flags=re.MULTILINE)
+    filedata = re.sub(r"^ARG build_date\b.*$", f"ENV build_date {str(date.today())}", filedata, flags=re.MULTILINE)
     original_comment = re.compile(r"# Get kafka from https://archive.apache.org/dist/kafka and pass the url through build arguments")
     updated_comment = f"# Get Kafka from https://archive.apache.org/dist/kafka, url passed as env var, for version {kafka_version}"
     filedata = original_comment.sub(updated_comment, filedata)
